@@ -74,6 +74,7 @@ export function HeroDemo() {
 
         <select
           value={voice}
+            aria-label="Voice"
           onChange={(event) => setVoice(event.target.value)}
           className="rounded-full border border-line bg-surface px-3 py-1.5 text-[13px] outline-none"
         >

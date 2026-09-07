@@ -53,6 +53,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh">
+      {/* Lets keyboard users past the sidebar without tabbing through every tool. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-[13px] focus:text-white"
+      >
+        Skip to content
+      </a>
+
       <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-r border-line bg-surface px-4 py-5 md:flex">
         <Link href="/home" className="mb-7 px-2">
           <Logo />
@@ -113,7 +121,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </Link>
         </header>
 
-        <main className="min-w-0 flex-1">{children}</main>
+        <main id="main" className="min-w-0 flex-1">{children}</main>
       </div>
 
       {searching && <CommandPalette onClose={() => setSearching(false)} />}

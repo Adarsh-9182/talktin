@@ -175,7 +175,7 @@ export function AgentsScreen() {
               </div>
             ))}
 
-            {thinking && <p className="text-[13px] text-muted">Thinking…</p>}
+            {thinking && <p aria-live="polite" className="text-[13px] text-muted">Thinking…</p>}
           </div>
 
           {(error || speech.error) && <div className="px-5"><ErrorNote message={error ?? speech.error!} /></div>}

@@ -96,6 +96,7 @@ export function StudioScreen() {
 
               <select
                 value={block.voice}
+            aria-label={`Voice for block ${index + 1}`}
                 onChange={(event) => update(block.id, { voice: event.target.value })}
                 className="rounded-full border border-line bg-canvas px-3 py-1 text-[12.5px] outline-none"
               >
@@ -165,7 +166,7 @@ export function StudioScreen() {
       </div>
 
       {working && (
-        <p className="mt-3 text-[12.5px] text-muted">
+        <p aria-live="polite" className="mt-3 text-[12.5px] text-muted">
           Blocks are generated one at a time, so a long piece takes a while — that is what keeps the free
           tier from rate-limiting halfway through.
         </p>

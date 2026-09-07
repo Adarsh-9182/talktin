@@ -135,7 +135,7 @@ export function DubbingScreen() {
       </div>
 
       {working && (
-        <ol className="mt-4 flex gap-2 text-[12.5px]">
+        <ol aria-live="polite" className="mt-4 flex gap-2 text-[12.5px]">
           {STEPS.map((label, index) => (
             <li
               key={label}

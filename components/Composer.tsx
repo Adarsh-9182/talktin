@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ErrorNote, Panel } from "@/components/Page";
 import { saveAsset } from "@/lib/assets";
+import { clearDraft, loadDraft, saveDraft, type Draft } from "@/lib/draft";
 import { TEMPLATES, findTemplate } from "@/lib/templates";
 import { DEFAULT_VOICE, VOICES, findVoice } from "@/lib/voices";
 
@@ -24,14 +25,21 @@ interface Clip {
   voice: string;
 }
 
-export function Composer({ template, voice: initialVoice }: { template?: string; voice?: string }) {
-  const preset = template ? findTemplate(template) : undefined;
-  const [text, setText] = useState(preset?.text ?? "");
-  const [style, setStyle] = useState(preset?.style ?? "");
-  const [voice, setVoice] = useState(findVoice(initialVoice ?? "")?.id ?? preset?.voice ?? DEFAULT_VOICE);
+function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }) {
+  const [text, setText] = useState(start.text);
+  const [style, setStyle] = useState(start.style);
+  const [voice, setVoice] = useState(start.voice);
+  const [dismissed, setDismissed] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
+
+  // Debounced, because writing on every keystroke is a lot of serialising for
+  // something only read once, on the next visit.
+  useEffect(() => {
+    const timer = setTimeout(() => saveDraft({ text, style, voice }), 400);
+    return () => clearTimeout(timer);
+  }, [text, style, voice]);
 
   // Every object URL is recorded when it is created, inside the handler, so the
   // unmount cleanup has the full list. Revoking any earlier would kill a player
@@ -102,6 +110,23 @@ export function Composer({ template, voice: initialVoice }: { template?: string;
           className="w-full resize-none bg-transparent p-5 text-[15px] leading-relaxed outline-none placeholder:text-muted/70"
         />
 
+        {restored && !dismissed && text.trim() && (
+          <div className="flex items-center gap-3 px-5 pb-3 text-[12px] text-muted">
+            <span>Picked up where you left off.</span>
+            <button
+              onClick={() => {
+                setText("");
+                setStyle("");
+                setDismissed(true);
+                clearDraft();
+              }}
+              className="underline underline-offset-2 transition-colors hover:text-ink"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-2 px-5 pb-3">
           {TEMPLATES.slice(0, 4).map((option) => (
             <button
@@ -110,6 +135,7 @@ export function Composer({ template, voice: initialVoice }: { template?: string;
                 setText(option.text);
                 setStyle(option.style);
                 setVoice(option.voice);
+                setDismissed(true);
               }}
               className="rounded-full border border-line px-3 py-1 text-[12.5px] text-muted transition-colors hover:text-ink"
             >
@@ -134,6 +160,7 @@ export function Composer({ template, voice: initialVoice }: { template?: string;
 
           <select
             value={voice}
+            aria-label="Voice"
             onChange={(event) => setVoice(event.target.value)}
             className="rounded-full border border-line bg-canvas px-3 py-1.5 text-[13px] outline-none"
           >
@@ -191,4 +218,32 @@ export function Composer({ template, voice: initialVoice }: { template?: string;
       </p>
     </>
   );
+}
+
+/** Never changes, so the store never notifies; this only distinguishes server from client. */
+const subscribe = () => () => {};
+
+/**
+ * localStorage cannot be read while rendering on the server, and reading it in
+ * an effect would set state a render too late. So the composer renders once
+ * with server-safe values, and once hydration has happened it remounts under a
+ * new key with whatever draft was left behind.
+ */
+export function Composer({ template, voice: initialVoice }: { template?: string; voice?: string }) {
+  const hydrated = useSyncExternalStore(subscribe, () => true, () => false);
+  const preset = template ? findTemplate(template) : undefined;
+
+  const fallback: Draft = {
+    text: preset?.text ?? "",
+    style: preset?.style ?? "",
+    voice: findVoice(initialVoice ?? "")?.id ?? preset?.voice ?? DEFAULT_VOICE,
+  };
+
+  // A template or voice in the URL is an explicit request and outranks a draft.
+  const draft = hydrated && !preset && !initialVoice ? loadDraft() : null;
+  const start: Draft = draft
+    ? { text: draft.text, style: draft.style, voice: findVoice(draft.voice)?.id ?? fallback.voice }
+    : fallback;
+
+  return <ComposerScreen key={hydrated ? "client" : "server"} start={start} restored={draft !== null} />;
 }
