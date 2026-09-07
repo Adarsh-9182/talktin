@@ -9,6 +9,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; soon?: 
     items: [
       { href: "/text-to-speech", label: "Text to Speech" },
       { href: "/voices", label: "Voices" },
+      { href: "/studio", label: "Studio" },
       { href: "/dubbing", label: "Dubbing" },
       { href: "/speech-to-text", label: "Speech to Text" },
     ],

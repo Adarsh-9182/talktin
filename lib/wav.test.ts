@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { pcmToWav } from "./wav.ts";
+import { pcmToWav, silence } from "./wav.ts";
 
 test("writes a RIFF/WAVE header in front of the samples", () => {
   const pcm = Buffer.alloc(100, 7);
@@ -18,4 +18,11 @@ test("records the sample rate and byte rate it was given", () => {
   assert.equal(wav.readUInt32LE(24), 48_000);
   assert.equal(wav.readUInt32LE(28), 48_000 * 4);
   assert.equal(wav.readUInt16LE(32), 4);
+});
+
+test("silence is the right number of zeroed bytes", () => {
+  const half = silence(500);
+  assert.equal(half.length, 24_000);
+  assert.ok(half.every((byte) => byte === 0));
+  assert.equal(silence(0).length, 0);
 });

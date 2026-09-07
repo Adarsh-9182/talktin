@@ -22,3 +22,8 @@ export function pcmToWav(pcm: Buffer, sampleRate = 24_000, channels = 1, bitsPer
 
   return Buffer.concat([header, pcm]);
 }
+
+/** A run of silent samples, used to space long-form blocks apart. */
+export function silence(milliseconds: number, sampleRate = 24_000, bytesPerSample = 2): Buffer {
+  return Buffer.alloc(Math.round((sampleRate * milliseconds) / 1000) * bytesPerSample);
+}
