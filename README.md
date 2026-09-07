@@ -1,4 +1,4 @@
-# Swara
+# Talktin
 
 An AI voice studio: type text, pick a voice, direct how it should be performed,
 and get speech back in 90+ languages.
