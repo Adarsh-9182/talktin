@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dropzone } from "@/components/Dropzone";
 import { ErrorNote, PageHeader, Panel } from "@/components/Page";
 import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
+import { readNdjson } from "@/lib/ndjson";
 import { DEFAULT_VOICE, VOICES } from "@/lib/voices";
 
 interface Dub {
@@ -15,6 +16,15 @@ interface Dub {
 }
 
 const STEPS = ["Transcribing", "Translating", "Speaking"] as const;
+
+type Event =
+  | { stage: "transcribing" }
+  | { stage: "translating"; transcript: string }
+  | { stage: "speaking"; translation: string }
+  | { stage: "done"; audio: string; language: string; voice: string }
+  | { stage: "failed"; error: string };
+
+const STEP_INDEX: Record<string, number> = { transcribing: 0, translating: 1, speaking: 2 };
 
 export function DubbingScreen() {
   const [file, setFile] = useState<File | null>(null);
@@ -35,13 +45,6 @@ export function DubbingScreen() {
     setDub(null);
     setStep(0);
 
-    // The API does all three stages in one request, so the step display is a
-    // rough progress estimate rather than a live report from the server.
-    const timers = [
-      setTimeout(() => setStep(1), 6_000),
-      setTimeout(() => setStep(2), 14_000),
-    ];
-
     try {
       const body = new FormData();
       body.append("file", file);
@@ -49,27 +52,35 @@ export function DubbingScreen() {
       body.append("voice", voice);
 
       const response = await fetch("/api/dub", { method: "POST", body });
-      const payload = (await response.json()) as {
-        transcript?: string; translation?: string; audio?: string;
-        language?: string; voice?: string; error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error ?? `Dubbing failed (${response.status})`);
 
-      const bytes = Uint8Array.from(atob(payload.audio ?? ""), (character) => character.charCodeAt(0));
-      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-      urlRef.current = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+      // Validation failures answer with a normal status before the stream opens.
+      if (!response.ok) {
+        const { error: message } = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(message ?? `Dubbing failed (${response.status})`);
+      }
 
-      setDub({
-        language: payload.language ?? language,
-        voice: payload.voice ?? voice,
-        transcript: payload.transcript ?? "",
-        translation: payload.translation ?? "",
-        url: urlRef.current,
-      });
+      // The server reports each stage as it starts, so the progress shown is
+      // what is actually happening rather than a guess from a timer.
+      let transcript = "";
+      let translation = "";
+
+      for await (const event of readNdjson<Event>(response)) {
+        if (event.stage === "failed") throw new Error(event.error);
+        if (event.stage === "translating") transcript = event.transcript;
+        if (event.stage === "speaking") translation = event.translation;
+
+        if (event.stage === "done") {
+          const bytes = Uint8Array.from(atob(event.audio), (character) => character.charCodeAt(0));
+          if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+          urlRef.current = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+          setDub({ language: event.language, voice: event.voice, transcript, translation, url: urlRef.current });
+        } else {
+          setStep(STEP_INDEX[event.stage] ?? 0);
+        }
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
-      timers.forEach(clearTimeout);
       setStep(-1);
     }
   }

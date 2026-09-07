@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guard } from "@/lib/limit";
 import { BadRequest, explain } from "@/lib/audio";
 import { DEFAULT_SYSTEM, runAgent, type ChatMessage } from "@/lib/agent";
 
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
     if (history.at(-1)?.role !== "user") throw new BadRequest("The last message must be from the caller.");
 
     const system = typeof body.system === "string" && body.system.trim() ? body.system.trim() : DEFAULT_SYSTEM;
+    // Counted here rather than at the top of the handler: a malformed
+    // request costs nothing, so it should not spend the caller's budget.
+    const limited = guard(request, "agent");
+    if (limited) return limited;
+
     const { reply, tools } = await runAgent(system, history);
     return NextResponse.json({ reply, tools });
   } catch (error) {

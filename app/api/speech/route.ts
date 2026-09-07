@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guard } from "@/lib/limit";
 import { BadRequest, explain, speak } from "@/lib/audio";
 import { DEFAULT_VOICE, findVoice } from "@/lib/voices";
 import { pcmToWav } from "@/lib/wav";
@@ -28,6 +29,11 @@ export async function POST(request: Request) {
 
     // The model takes direction in the prompt itself — there is no separate
     // emotion parameter — so "read this sarcastically" is prepended to the text.
+    // Counted here rather than at the top of the handler: a malformed
+    // request costs nothing, so it should not spend the caller's budget.
+    const limited = guard(request, "speech");
+    if (limited) return limited;
+
     const wav = pcmToWav(await speak(style ? `${style}: ${text}` : text, voice));
 
     return new NextResponse(new Uint8Array(wav), {

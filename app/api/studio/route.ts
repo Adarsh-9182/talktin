@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guard } from "@/lib/limit";
 import { BadRequest, explain, speak } from "@/lib/audio";
 import { DEFAULT_VOICE, findVoice } from "@/lib/voices";
 import { pcmToWav, silence } from "@/lib/wav";
@@ -40,6 +41,11 @@ export async function POST(request: Request) {
     if (total > MAX_TOTAL_CHARACTERS) {
       throw new BadRequest(`That's ${total} characters across all blocks. The limit is ${MAX_TOTAL_CHARACTERS}.`);
     }
+
+    // Counted here rather than at the top of the handler: a malformed
+    // request costs nothing, so it should not spend the caller's budget.
+    const limited = guard(request, "studio");
+    if (limited) return limited;
 
     // Sequential on purpose: the free tier rate-limits parallel requests, and a
     // 429 halfway through a chapter is worse than waiting a few seconds.
