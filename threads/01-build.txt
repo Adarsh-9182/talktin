@@ -1,0 +1,90 @@
+Building an AI voice studio from scratch — text to speech, dubbing, transcription, and agents that talk.
+
+Free tiers only. The domain is the entire budget.
+
+Here is how it is going, part by part.
+
+---
+
+Part 1 — the engine.
+
+An agent loop: ask the model, run the tools it asks for, feed the results back, repeat.
+
+Tool failures come back as messages, not exceptions. A model told what it got wrong usually fixes it next turn. A run that dies teaches it nothing.
+
+---
+
+Part 2 — speech.
+
+There is no emotion parameter. Performance is steered by what you say to the model.
+
+So "read this like a documentary narrator" sits in the composer next to the words, not buried in a settings panel. The direction IS the control.
+
+---
+
+Part 3 — dubbing.
+
+Transcribe, translate, speak.
+
+The translation prompt asks for roughly the same spoken length as the source — because a translation that runs twice as long no longer fits the video it came from.
+
+---
+
+Part 4 — progress that is not a lie.
+
+The dubbing screen used to guess. Six seconds in, claim to be translating.
+
+Now the endpoint streams NDJSON as each stage actually begins.
+
+Hardest part: a chunk can end mid-object. Five tests exist for that alone.
+
+---
+
+Part 5 — agents that show their work.
+
+Every tool the agent reached for is printed under the reply that used it.
+
+An agent that invents an order status looks exactly like one that looked it up. Closing that gap is the whole product.
+
+---
+
+Part 6 — four bugs I found by reading my own code against the plan it deploys to:
+
+1. nothing retried rate limits
+2. routes asked for 300s on a 60s plan
+3. dubbing binned a finished translation if only speech failed
+4. the docs described an endpoint that had changed
+
+---
+
+The 300 second one was the worst.
+
+Twenty blocks of long-form is minutes of model time. The function dies mid-run and you get nothing.
+
+Fixed by sending one request per block and joining the WAVs in the browser.
+
+Bonus: block 15 failing now keeps blocks 1 to 14.
+
+---
+
+Part 7 — what I deliberately did not copy.
+
+No customer logo wall. I have no customers, and inventing them is a lie told in a very convincing typeface.
+
+No voice cloning. No buttons for features I cannot actually run.
+
+---
+
+Status, honestly:
+
+13 pages, 4 API routes, 30 tests, lint and types clean, deployed.
+
+And the audio path has never run once — no API key yet. Everything above is engineering around something still unproven.
+
+That is what I am fixing next.
+
+---
+
+Code is open, including the parts that are not finished:
+
+github.com/Adarsh-9182/talktin
