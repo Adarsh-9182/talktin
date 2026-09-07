@@ -40,14 +40,20 @@ const ENDPOINTS = [
     id: "dub",
     method: "POST",
     path: "/api/dub",
-    summary: "Transcribes a clip, translates it, and speaks the translation.",
+    summary: "Transcribes a clip, translates it, and speaks the translation — reporting each stage as it starts.",
     request: `FormData
   file: interview.mp4
   language: hi-IN
   voice: Sulafat`,
-    response: `{ "transcript": "…", "translation": "…", "audio": "<base64 wav>" }`,
+    response: `application/x-ndjson — one JSON object per line
+
+{"stage":"transcribing"}
+{"stage":"translating","transcript":"…"}
+{"stage":"speaking","translation":"…"}
+{"stage":"done","audio":"<base64 wav>","language":"Hindi","voice":"Sulafat"}`,
     notes: [
-      "The three stages are sequential — each needs the previous one's words.",
+      "The three stages are sequential — each needs the previous one's words — so progress is streamed rather than withheld until the end.",
+      "Validation answers with an ordinary status code before the stream opens; a failure after that arrives as a final {\"stage\":\"failed\",\"error\":\"…\"} line.",
       "Translation is asked for roughly the source's spoken length, so the dub still fits the original timing.",
     ],
   },

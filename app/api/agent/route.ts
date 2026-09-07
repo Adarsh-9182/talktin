@@ -4,7 +4,9 @@ import { BadRequest, explain } from "@/lib/audio";
 import { DEFAULT_SYSTEM, runAgent, type ChatMessage } from "@/lib/agent";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// The hosting plan caps a function at 60 seconds; anything longer than this
+// has to be split across requests rather than declared away.
+export const maxDuration = 60;
 
 const MAX_MESSAGES = 40;
 

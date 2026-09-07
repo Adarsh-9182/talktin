@@ -5,7 +5,9 @@ import { DEFAULT_VOICE, findVoice } from "@/lib/voices";
 import { pcmToWav } from "@/lib/wav";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+// The hosting plan caps a function at 60 seconds; anything longer than this
+// has to be split across requests rather than declared away.
+export const maxDuration = 60;
 
 /**
  * Dubbing takes three model calls and the better part of a minute, so it

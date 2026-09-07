@@ -84,7 +84,6 @@ export const BUDGETS = {
   agent: { max: 40, windowMs: 5 * 60_000 },
   transcribe: { max: 10, windowMs: 10 * 60_000 },
   dub: { max: 5, windowMs: 10 * 60_000 },
-  studio: { max: 3, windowMs: 10 * 60_000 },
 } as const satisfies Record<string, Limit>;
 
 /** Returns a 429 to send back, or null when the caller is within budget. */

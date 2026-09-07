@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Dropzone } from "@/components/Dropzone";
 import { ErrorNote, PageHeader, Panel } from "@/components/Page";
-import { DEFAULT_LANGUAGE, LANGUAGES } from "@/lib/languages";
+import { DEFAULT_LANGUAGE, LANGUAGES, languageLabel } from "@/lib/languages";
 import { readNdjson } from "@/lib/ndjson";
 import { DEFAULT_VOICE, VOICES } from "@/lib/voices";
 
@@ -12,7 +12,8 @@ interface Dub {
   voice: string;
   transcript: string;
   translation: string;
-  url: string;
+  /** Null when transcription and translation succeeded but speech did not. */
+  url: string | null;
 }
 
 const STEPS = ["Transcribing", "Translating", "Speaking"] as const;
@@ -65,9 +66,18 @@ export function DubbingScreen() {
       let translation = "";
 
       for await (const event of readNdjson<Event>(response)) {
-        if (event.stage === "failed") throw new Error(event.error);
         if (event.stage === "translating") transcript = event.transcript;
         if (event.stage === "speaking") translation = event.translation;
+
+        if (event.stage === "failed") {
+          // Speech is the last of three calls. If it fails, the transcript and
+          // translation already succeeded and are worth keeping on screen —
+          // throwing here would bin work the caller has already paid for.
+          if (transcript) {
+            setDub({ language: languageLabel(language) ?? language, voice, transcript, translation, url: null });
+          }
+          throw new Error(event.error);
+        }
 
         if (event.stage === "done") {
           const bytes = Uint8Array.from(atob(event.audio), (character) => character.charCodeAt(0));
@@ -153,19 +163,21 @@ export function DubbingScreen() {
 
       {dub && (
         <div className="mt-8 space-y-4">
-          <Panel className="p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[13px] font-medium text-muted">{dub.language} · {dub.voice}</h2>
-              <a
-                href={dub.url}
-                download={`dub-${dub.language.toLowerCase().replace(/\W+/g, "-")}.wav`}
-                className="text-[12.5px] text-muted transition-colors hover:text-ink"
-              >
-                Download
-              </a>
-            </div>
-            <audio controls src={dub.url} className="h-10 w-full" />
-          </Panel>
+          {dub.url && (
+            <Panel className="p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-[13px] font-medium text-muted">{dub.language} · {dub.voice}</h2>
+                <a
+                  href={dub.url}
+                  download={`dub-${dub.language.toLowerCase().replace(/\W+/g, "-")}.wav`}
+                  className="text-[12.5px] text-muted transition-colors hover:text-ink"
+                >
+                  Download
+                </a>
+              </div>
+              <audio controls src={dub.url} className="h-10 w-full" />
+            </Panel>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Panel className="p-5">

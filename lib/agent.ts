@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { client } from "./audio";
+import { client, retryProvider } from "./audio";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -122,11 +122,13 @@ export async function runAgent(
   const used: ToolRun[] = [];
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents,
-      config: { systemInstruction: system, tools },
-    });
+    const response = await retryProvider(() =>
+      ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents,
+        config: { systemInstruction: system, tools },
+      }),
+    );
 
     const calls = response.functionCalls ?? [];
     if (calls.length === 0) {

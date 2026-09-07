@@ -12,6 +12,51 @@ export const ACCEPTED_AUDIO = [
 /** A problem with what the caller sent, rather than with the provider. */
 export class BadRequest extends Error {}
 
+const MAX_ATTEMPTS = 4;
+
+/**
+ * Retries rate limits and transient server errors with exponential backoff.
+ *
+ * On a free tier a 429 means "wait", not "this request was wrong", and the two
+ * are worth separating: dubbing spends a transcription and a translation before
+ * it ever asks for speech, so failing the third call outright throws away two
+ * successful ones.
+ */
+export interface RetryOptions {
+  maxAttempts?: number;
+  /** Injectable so tests can assert the backoff without waiting for it. */
+  wait?: (milliseconds: number) => Promise<void>;
+}
+
+export async function retryProvider<T>(work: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? MAX_ATTEMPTS;
+  const wait = options.wait ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  let last: unknown;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await work();
+    } catch (error) {
+      last = error;
+      if (!isTransient(error) || attempt === maxAttempts - 1) throw error;
+      // Jittered, so parallel callers do not all retry on the same tick.
+      await wait(Math.min(1_000 * 2 ** attempt, 15_000) + Math.random() * 400);
+    }
+  }
+
+  throw last;
+}
+
+/** Exported for tests: the judgement call that decides whether to retry at all. */
+export { isTransient };
+
+function isTransient(error: unknown): boolean {
+  const status = (error as { status?: number })?.status;
+  if (typeof status === "number") return status === 429 || status >= 500;
+  const message = String((error as Error)?.message ?? error);
+  return /\b(429|5\d\d)\b|rate.?limit|quota|overloaded|unavailable|timeout/i.test(message);
+}
+
 export function client(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set on the server.");
@@ -68,7 +113,8 @@ export function guessMime(filename: string): string | undefined {
 
 /** Asks the model for a plain transcript — no commentary, no markdown. */
 export async function transcribe(base64: string, mimeType: string): Promise<string> {
-  const response = await client().models.generateContent({
+  const response = await retryProvider(() =>
+    client().models.generateContent({
     model: "gemini-2.5-flash",
     contents: [
       {
@@ -84,7 +130,8 @@ export async function transcribe(base64: string, mimeType: string): Promise<stri
         ],
       },
     ],
-  });
+    }),
+  );
 
   const text = response.text?.trim();
   if (!text) throw new BadRequest("No speech was found in that file.");
@@ -97,7 +144,8 @@ export async function transcribe(base64: string, mimeType: string): Promise<stri
  * as the source no longer fits the video it came from.
  */
 export async function translate(text: string, language: string): Promise<string> {
-  const response = await client().models.generateContent({
+  const response = await retryProvider(() =>
+    client().models.generateContent({
     model: "gemini-2.5-flash",
     contents: [{ role: "user", parts: [{ text }] }],
     config: {
@@ -106,7 +154,8 @@ export async function translate(text: string, language: string): Promise<string>
         "and roughly the same spoken length, so it still fits the original timing. Idiom should " +
         "sound native rather than literal. Return only the translation, with no notes or quotes.",
     },
-  });
+    }),
+  );
 
   const translated = response.text?.trim();
   if (!translated) throw new Error("The translation came back empty.");
@@ -115,14 +164,16 @@ export async function translate(text: string, language: string): Promise<string>
 
 /** Generates speech and returns raw PCM, ready to be wrapped as a WAV. */
 export async function speak(text: string, voice: string): Promise<Buffer> {
-  const response = await client().models.generateContent({
+  const response = await retryProvider(() =>
+    client().models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
     contents: [{ role: "user", parts: [{ text }] }],
     config: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
     },
-  });
+    }),
+  );
 
   const base64 = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   if (!base64) throw new Error("The model returned no audio.");
