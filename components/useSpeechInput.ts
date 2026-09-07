@@ -31,19 +31,19 @@ function constructor(): RecognitionConstructor | undefined {
  * wins on both price and latency.
  */
 export function useSpeechInput(onFinal: (text: string) => void) {
-  const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<Recognition | null>(null);
-  // Keep the callback fresh without restarting recognition on every render.
   const onFinalRef = useRef(onFinal);
-  onFinalRef.current = onFinal;
 
+  // Keeping the callback fresh in an effect, rather than during render, so a
+  // re-render never mutates a ref another render is reading.
   useEffect(() => {
-    setSupported(constructor() !== undefined);
-    return () => recognitionRef.current?.stop();
-  }, []);
+    onFinalRef.current = onFinal;
+  }, [onFinal]);
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
 
   function start() {
     const Recognizer = constructor();
@@ -98,5 +98,5 @@ export function useSpeechInput(onFinal: (text: string) => void) {
     recognitionRef.current?.stop();
   }
 
-  return { supported, listening, heard, error, start, stop };
+  return { listening, heard, error, start, stop };
 }

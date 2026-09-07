@@ -181,18 +181,16 @@ export default function Agents() {
           {(error || speech.error) && <div className="px-5"><ErrorNote message={error ?? speech.error!} /></div>}
 
           <div className="flex items-center gap-2 border-t border-line p-3">
-            {speech.supported && (
-              <button
-                onClick={speech.listening ? speech.stop : speech.start}
-                disabled={thinking}
-                aria-label={speech.listening ? "Stop listening" : "Speak"}
-                className={`h-9 w-9 shrink-0 rounded-full border text-[13px] transition-colors ${
-                  speech.listening ? "border-ink bg-ink text-white" : "border-line hover:border-ink/30"
-                }`}
-              >
-                {speech.listening ? "■" : "🎙"}
-              </button>
-            )}
+            <button
+              onClick={speech.listening ? speech.stop : speech.start}
+              disabled={thinking}
+              aria-label={speech.listening ? "Stop listening" : "Speak"}
+              className={`h-9 w-9 shrink-0 rounded-full border text-[13px] transition-colors ${
+                speech.listening ? "border-ink bg-ink text-white" : "border-line hover:border-ink/30"
+              }`}
+            >
+              {speech.listening ? "■" : "🎙"}
+            </button>
 
             <input
               value={speech.listening ? speech.heard || "Listening…" : draft}
