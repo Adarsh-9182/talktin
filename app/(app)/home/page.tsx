@@ -3,14 +3,18 @@ import { Composer } from "@/components/Composer";
 import { MobileNav } from "@/components/Shell";
 import { TEMPLATES } from "@/lib/templates";
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ template?: string }> }) {
-  const { template } = await searchParams;
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ template?: string; voice?: string }>;
+}) {
+  const { template, voice } = await searchParams;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 pb-24 pt-8">
       <MobileNav />
 
-      <Composer template={template} />
+      <Composer template={template} voice={voice} />
 
       <Link
         href="/dubbing"

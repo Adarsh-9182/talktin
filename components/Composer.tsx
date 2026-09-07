@@ -24,11 +24,11 @@ interface Clip {
   voice: string;
 }
 
-export function Composer({ template }: { template?: string }) {
+export function Composer({ template, voice: initialVoice }: { template?: string; voice?: string }) {
   const preset = template ? findTemplate(template) : undefined;
   const [text, setText] = useState(preset?.text ?? "");
   const [style, setStyle] = useState(preset?.style ?? "");
-  const [voice, setVoice] = useState(preset?.voice ?? DEFAULT_VOICE);
+  const [voice, setVoice] = useState(findVoice(initialVoice ?? "")?.id ?? preset?.voice ?? DEFAULT_VOICE);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
