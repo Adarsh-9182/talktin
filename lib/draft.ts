@@ -6,7 +6,7 @@
  */
 export interface Draft {
   text: string;
-  style: string;
+  speed: number;
   voice: string;
 }
 
@@ -20,7 +20,9 @@ export function loadDraft(): Draft | null {
     if (typeof parsed.text !== "string") return null;
     return {
       text: parsed.text,
-      style: typeof parsed.style === "string" ? parsed.style : "",
+      // Drafts saved before the engine change carry a `style` string; they
+      // reopen at normal speed rather than being thrown away.
+      speed: typeof parsed.speed === "number" ? parsed.speed : 1,
       voice: typeof parsed.voice === "string" ? parsed.voice : "",
     };
   } catch {

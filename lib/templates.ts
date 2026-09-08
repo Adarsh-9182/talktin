@@ -4,7 +4,14 @@ export interface Template {
   name: string;
   blurb: string;
   voice: string;
-  style: string;
+  /**
+   * The engine takes no performance notes, so a template's character has to
+   * be carried by something it does take. These are the old direction lines
+   * reduced to the part of them the model can honour: a meditation is slow,
+   * an advert is quick, and the rest of "warmly, like a bedtime story" is
+   * gone rather than pretended at.
+   */
+  speed: number;
   text: string;
 }
 
@@ -14,7 +21,7 @@ export const TEMPLATES: Template[] = [
     name: "Narrate a story",
     blurb: "Warm, unhurried delivery for fiction and audiobooks.",
     voice: "Sulafat",
-    style: "Read this warmly and unhurried, like a bedtime story",
+    speed: 0.85,
     text: "In the ancient land of Eldoria, where the skies shimmered and the forests whispered their secrets to the wind, there lived a dragon who had never once frightened anybody.",
   },
   {
@@ -22,7 +29,7 @@ export const TEMPLATES: Template[] = [
     name: "Record an ad",
     blurb: "Bright and confident, for a thirty-second spot.",
     voice: "Laomedeia",
-    style: "Read this with bright, confident energy, like a radio advert",
+    speed: 1.1,
     text: "Switching is the easy part. Bring your team over in an afternoon, keep every file exactly where it was, and pay nothing until you are sure.",
   },
   {
@@ -30,7 +37,7 @@ export const TEMPLATES: Template[] = [
     name: "Explainer video",
     blurb: "Clear and even, for a voiceover that has to be followed.",
     voice: "Charon",
-    style: "Read this clearly and evenly, like a documentary narrator",
+    speed: 0.95,
     text: "Every request starts the same way. The text you write is sent to the model along with a voice, and what comes back is raw audio that your browser can play.",
   },
   {
@@ -38,7 +45,7 @@ export const TEMPLATES: Template[] = [
     name: "Guide a meditation",
     blurb: "Slow, gentle, with room to breathe.",
     voice: "Vindemiatrix",
-    style: "Read this slowly and gently, leaving long pauses between sentences",
+    speed: 0.75,
     text: "Let your shoulders drop. Notice the weight of your hands where they rest. There is nothing to solve in the next sixty seconds.",
   },
   {
@@ -46,7 +53,7 @@ export const TEMPLATES: Template[] = [
     name: "Make an announcement",
     blurb: "Firm and unmistakable, for anything people must actually hear.",
     voice: "Alnilam",
-    style: "Read this firmly and clearly, like a public announcement",
+    speed: 0.95,
     text: "The service will be unavailable on Sunday between two and four in the morning while we move the database. Nothing you have saved will be affected.",
   },
   {
@@ -54,7 +61,7 @@ export const TEMPLATES: Template[] = [
     name: "Tell a joke",
     blurb: "Dry timing, for when the delivery is the whole thing.",
     voice: "Zubenelgenubi",
-    style: "Read this dryly, like you are thoroughly unimpressed",
+    speed: 0.9,
     text: "I told my computer I needed a break. Now it will not stop sending me holiday adverts.",
   },
   {
@@ -62,7 +69,7 @@ export const TEMPLATES: Template[] = [
     name: "Support reply",
     blurb: "Friendly and matter-of-fact, for automated call replies.",
     voice: "Achird",
-    style: "Read this in a friendly, matter-of-fact way",
+    speed: 1.0,
     text: "Good news — that order was delivered last Tuesday, so it still qualifies for a refund. I can start that for you now if you would like.",
   },
   {
@@ -70,7 +77,7 @@ export const TEMPLATES: Template[] = [
     name: "Read the news",
     blurb: "Informative and neutral, at a steady clip.",
     voice: "Rasalgethi",
-    style: "Read this at a steady clip, neutral and informative",
+    speed: 1.1,
     text: "Markets closed higher for a third straight session, led by shipping and cement. Analysts pointed to easing fuel costs rather than any change in demand.",
   },
 ];
