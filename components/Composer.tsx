@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { speak } from "@/lib/kokoro";
 import { ErrorNote, Panel } from "@/components/Page";
 import { saveAsset } from "@/lib/assets";
 import { clearDraft, loadDraft, saveDraft, type Draft } from "@/lib/draft";
@@ -27,19 +28,21 @@ interface Clip {
 
 function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }) {
   const [text, setText] = useState(start.text);
-  const [style, setStyle] = useState(start.style);
+  const [speed, setSpeed] = useState(start.speed);
   const [voice, setVoice] = useState(start.voice);
   const [dismissed, setDismissed] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Percent of the one-time model download, or null when nothing is loading. */
+  const [load, setLoad] = useState<number | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
 
   // Debounced, because writing on every keystroke is a lot of serialising for
   // something only read once, on the next visit.
   useEffect(() => {
-    const timer = setTimeout(() => saveDraft({ text, style, voice }), 400);
+    const timer = setTimeout(() => saveDraft({ text, speed, voice }), 400);
     return () => clearTimeout(timer);
-  }, [text, style, voice]);
+  }, [text, speed, voice]);
 
   // Every object URL is recorded when it is created, inside the handler, so the
   // unmount cleanup has the full list. Revoking any earlier would kill a player
@@ -53,18 +56,16 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
     setError(null);
 
     try {
-      const response = await fetch("/api/speech", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, voice, style }),
+      // Generated here rather than at /api/speech. The engine is a 82M-parameter
+      // model running in this tab, so there is no request to fail, no quota to
+      // exhaust and no 60-second function ceiling to split long text around.
+      // The first call downloads the weights; setLoad reports that once.
+      const blob = await speak(text, {
+        voice,
+        speed,
+        onProgress: (progress) => setLoad(progress.percent),
       });
-
-      if (!response.ok) {
-        const { error: message } = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(message ?? `Generation failed (${response.status})`);
-      }
-
-      const blob = await response.blob();
+      setLoad(null);
       const url = URL.createObjectURL(blob);
       urlsRef.current.push(url);
       setClips((previous) => [{ id: crypto.randomUUID(), url, text: text.trim(), voice }, ...previous]);
@@ -74,6 +75,7 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
       void saveAsset({ kind: "speech", title: text.trim().slice(0, 90), voice, blob }).catch(() => undefined);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
+      setLoad(null);
     } finally {
       setGenerating(false);
     }
@@ -116,7 +118,7 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
             <button
               onClick={() => {
                 setText("");
-                setStyle("");
+                setSpeed(1);
                 setDismissed(true);
                 clearDraft();
               }}
@@ -133,7 +135,7 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
               key={option.id}
               onClick={() => {
                 setText(option.text);
-                setStyle(option.style);
+                setSpeed(option.speed);
                 setVoice(option.voice);
                 setDismissed(true);
               }}
@@ -144,18 +146,34 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
           ))}
         </div>
 
-        <div className="border-t border-line px-5 py-3">
+        {/*
+          This was a free-text "Direction" field, which worked by prepending
+          "read this like a documentary narrator" to the text for a model that
+          took performance notes in the prompt. Kokoro has no equivalent input,
+          so keeping the field would have been a control that silently did
+          nothing. Speed is what the model actually exposes, so speed is what
+          is offered.
+        */}
+        <div className="flex items-center gap-3 border-t border-line px-5 py-3">
+          <label htmlFor="speed" className="text-[13px] text-muted">Speed</label>
           <input
-            value={style}
-            onChange={(event) => setStyle(event.target.value)}
-            placeholder="Direction — e.g. read this slowly, like a documentary narrator"
-            className="w-full bg-transparent text-[13px] outline-none placeholder:text-muted/70"
+            id="speed"
+            type="range"
+            min={0.5}
+            max={2}
+            step={0.05}
+            value={speed}
+            onChange={(event) => setSpeed(Number(event.target.value))}
+            className="h-1 flex-1 accent-ink"
           />
+          <span className="w-12 text-right font-mono text-[12px] text-muted tabular-nums">
+            {speed.toFixed(2)}×
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-3">
           <span className="rounded-full border border-line bg-canvas px-2.5 py-1 font-mono text-[11px] text-muted">
-            gemini-2.5-flash-tts
+            kokoro-82m · on-device
           </span>
 
           <select
@@ -178,7 +196,11 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
             disabled={generating || !text.trim()}
             className="ml-auto rounded-full bg-ink px-5 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-35"
           >
-            {generating ? "Generating…" : "Generate ↑"}
+            {!generating
+              ? "Generate ↑"
+              : load !== null
+                ? `Loading voice… ${load}%`
+                : "Generating…"}
           </button>
         </div>
       </Panel>
@@ -235,14 +257,14 @@ export function Composer({ template, voice: initialVoice }: { template?: string;
 
   const fallback: Draft = {
     text: preset?.text ?? "",
-    style: preset?.style ?? "",
+    speed: preset?.speed ?? 1,
     voice: findVoice(initialVoice ?? "")?.id ?? preset?.voice ?? DEFAULT_VOICE,
   };
 
   // A template or voice in the URL is an explicit request and outranks a draft.
   const draft = hydrated && !preset && !initialVoice ? loadDraft() : null;
   const start: Draft = draft
-    ? { text: draft.text, style: draft.style, voice: findVoice(draft.voice)?.id ?? fallback.voice }
+    ? { text: draft.text, speed: draft.speed, voice: findVoice(draft.voice)?.id ?? fallback.voice }
     : fallback;
 
   return <ComposerScreen key={hydrated ? "client" : "server"} start={start} restored={draft !== null} />;
