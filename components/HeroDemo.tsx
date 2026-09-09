@@ -2,14 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import { VOICES } from "@/lib/voices";
+import { speak } from "@/lib/kokoro";
 
 const LINES = [
-  { style: "Read this warmly, like a storyteller", text: "In the ancient land of Eldoria, the skies shimmered and the forests kept their secrets." },
-  { style: "Read this dryly, like you are unimpressed", text: "I told my computer I needed a break. Now it will not stop sending me holiday adverts." },
-  { style: "Read this slowly and gently", text: "Let your shoulders drop. There is nothing to solve in the next sixty seconds." },
+  { speed: 0.95, text: "In the ancient land of Eldoria, the skies shimmered and the forests kept their secrets." },
+  { speed: 1, text: "I told my computer I needed a break. Now it will not stop sending me holiday adverts." },
+  { speed: 0.8, text: "Let your shoulders drop. There is nothing to solve in the next sixty seconds." },
 ];
 
-const PICKS = ["Achird", "Sulafat", "Charon", "Leda", "Algenib"];
+/*
+ * The demo picks from the top of the catalogue, not across it. These are the
+ * four voices the model author grades B- or better; the rest are in the
+ * picker for people who go looking, but the one line a visitor hears before
+ * deciding whether this product works should not be a D.
+ *
+ * The previous list — Achird, Sulafat, Charon — named Gemini voices that no
+ * longer exist in VOICES, so the selector was choosing ids the engine would
+ * have rejected even if the endpoint behind it had ever answered.
+ */
+const PICKS = ["af_heart", "af_bella", "af_nicole", "bf_emma"];
 
 export function HeroDemo() {
   const [line, setLine] = useState(0);
@@ -31,17 +42,9 @@ export function HeroDemo() {
     setError(null);
 
     try {
-      const response = await fetch("/api/speech", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...LINES[line]!, voice }),
-      });
-      if (!response.ok) {
-        const { error: message } = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(message ?? "Could not generate that just now.");
-      }
+      const blob = await speak(LINES[line]!.text, { voice, speed: LINES[line]!.speed });
 
-      const url = URL.createObjectURL(await response.blob());
+      const url = URL.createObjectURL(blob);
       const audio = (audioRef.current ??= new Audio());
       audio.src = url;
       audio.onended = () => {
@@ -61,7 +64,7 @@ export function HeroDemo() {
   return (
     <div className="rounded-2xl border border-line bg-canvas p-5">
       <p className="text-[15px] leading-relaxed">{current.text}</p>
-      <p className="mt-2 text-[12.5px] text-muted">{current.style}</p>
+      <p className="mt-2 text-[12.5px] text-muted">Generated in your browser · {current.speed.toFixed(2)}× speed</p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <button

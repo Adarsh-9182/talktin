@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { speak } from "@/lib/kokoro";
 
 /** Plays one line in one voice. Used on a voice's own page. */
-export function VoicePreview({ voice, lines }: { voice: string; lines: { label: string; text: string; style?: string }[] }) {
+export function VoicePreview({ voice, lines }: { voice: string; lines: { label: string; text: string }[] }) {
   const [index, setIndex] = useState(0);
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +32,8 @@ export function VoicePreview({ voice, lines }: { voice: string; lines: { label: 
     if (!url) {
       setState("loading");
       try {
-        const response = await fetch("/api/speech", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...lines[index]!, voice }),
-        });
-        if (!response.ok) {
-          const { error: message } = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(message ?? "Could not generate that just now.");
-        }
-        url = URL.createObjectURL(await response.blob());
+        const blob = await speak(lines[index]!.text, { voice });
+        url = URL.createObjectURL(blob);
         cache.current.set(index, url);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));

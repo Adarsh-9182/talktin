@@ -4,18 +4,26 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ErrorNote, PageHeader } from "@/components/Page";
 import { VOICES } from "@/lib/voices";
+import { speak } from "@/lib/kokoro";
 
-const SAMPLE = "Hello — this is what I sound like. I can read anything you write, in any tone you ask for.";
+/*
+ * The old line promised "any tone you ask for", which the engine cannot do —
+ * a voice demo is the worst possible place to advertise a control that does
+ * not exist, because the listener is judging the product by this sentence.
+ */
+const SAMPLE = "Hello — this is what I sound like. Written here, spoken here: nothing you type ever leaves this machine.";
 
 export function VoicesScreen() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Percent of the one-time weight download, or null when nothing is loading. */
+  const [load, setLoad] = useState<number | null>(null);
 
   // One element for the whole page, so starting a preview stops the last one.
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Previews cost a request each, so keep the ones already generated.
+  // A preview costs a few seconds of local compute, so keep the ones made.
   const cache = useRef(new Map<string, string>());
 
   useEffect(() => {
@@ -39,22 +47,18 @@ export function VoicesScreen() {
     if (!url) {
       setLoading(voice);
       try {
-        const response = await fetch("/api/speech", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: SAMPLE, voice }),
+        const blob = await speak(SAMPLE, {
+          voice,
+          onProgress: (progress) => setLoad(progress.percent),
         });
-        if (!response.ok) {
-          const { error: message } = (await response.json().catch(() => ({}))) as { error?: string };
-          throw new Error(message ?? `Preview failed (${response.status})`);
-        }
-        url = URL.createObjectURL(await response.blob());
+        url = URL.createObjectURL(blob);
         cache.current.set(voice, url);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
         return;
       } finally {
         setLoading(null);
+        setLoad(null);
       }
     }
 
@@ -74,7 +78,7 @@ export function VoicesScreen() {
     <div className="mx-auto w-full max-w-4xl px-6 pb-24 pt-10">
       <PageHeader
         title="Voices"
-        subtitle="Thirty prebuilt voices. Play one to hear it before you write a word."
+        subtitle={`${VOICES.length} prebuilt voices, generated on your own machine. Play one to hear it before you write a word.`}
       />
 
       <input
@@ -89,6 +93,12 @@ export function VoicesScreen() {
       {shown.length === 0 ? (
         <p className="mt-10 text-[14px] text-muted">No voice matches “{query.trim()}”.</p>
       ) : (
+        <>
+        {load !== null && (
+          <p aria-live="polite" className="mt-6 text-[12.5px] text-muted">
+            Downloading the voice model once — {load}%. Every preview after this one is instant and offline.
+          </p>
+        )}
         <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((voice) => {
             const isPlaying = playing === voice.id;
@@ -124,6 +134,7 @@ export function VoicesScreen() {
             );
           })}
         </ul>
+        </>
       )}
     </div>
   );

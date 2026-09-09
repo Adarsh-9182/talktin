@@ -2,27 +2,10 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "API reference — Talktin",
-  description: "The four endpoints every screen in Talktin is built on.",
+  description: "The on-device speech engine, and the three endpoints behind everything else.",
 };
 
 const ENDPOINTS = [
-  {
-    id: "speech",
-    method: "POST",
-    path: "/api/speech",
-    summary: "Turns text into speech and returns a WAV.",
-    request: `{
-  "text": "The first move is what sets everything in motion.",
-  "voice": "Achird",
-  "style": "Read this with quiet confidence"
-}`,
-    response: "audio/wav — 24kHz, 16-bit, mono",
-    notes: [
-      "text is required and capped at 5,000 characters.",
-      "voice falls back to the default if the name is not in the catalogue.",
-      "style is prepended to the text, because the model takes direction in words rather than as a parameter.",
-    ],
-  },
   {
     id: "transcribe",
     method: "POST",
@@ -81,7 +64,7 @@ const ENDPOINTS = [
 const ERRORS = [
   { code: "400", meaning: "Something about the request needs fixing. The message says what." },
   { code: "429", meaning: "The free tier's quota is spent. Wait, then retry — the request was fine." },
-  { code: "500", meaning: "GEMINI_API_KEY is not set on the server." },
+  { code: "500", meaning: "GEMINI_API_KEY is not set on the server. Speech is unaffected — it does not use one." },
   { code: "502", meaning: "The model failed or returned nothing usable." },
 ];
 
@@ -90,9 +73,60 @@ export default function Docs() {
     <div className="mx-auto max-w-4xl px-6 pb-24 pt-20">
       <h1 className="text-[44px] font-semibold leading-[1.05] tracking-[-0.03em]">API reference</h1>
       <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-muted">
-        Four endpoints. Every screen in the product is built on them, so anything the UI can do, a fetch
-        call can do too.
+        Speech is generated in the browser, so it is a function call rather than an endpoint. The three
+        things that do need a server are documented below it.
       </p>
+
+      <section id="speech" className="mt-14 scroll-mt-24 border-t border-line pt-10">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <span className="rounded-md bg-ink px-2 py-0.5 font-mono text-[11px] text-white">CLIENT</span>
+          <h2 className="font-mono text-[17px]">speak()</h2>
+        </div>
+        <p className="mt-3 max-w-xl text-[14.5px] leading-relaxed text-muted">
+          There used to be a <code className="font-mono">POST /api/speech</code> here. It is gone, because
+          the speech model now runs in the tab: Kokoro-82M, fetched once from the Hugging Face CDN, cached
+          by the browser, executed through ONNX Runtime Web. Nothing to authenticate, nothing to meter,
+          and the text never leaves the machine that typed it.
+        </p>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div>
+            <p className="mb-2 text-[12px] font-medium uppercase tracking-wider text-muted">Call</p>
+            <pre className="overflow-x-auto rounded-xl border border-line bg-canvas p-4 text-[12.5px] leading-relaxed">
+              <code>{`import { speak } from "@/lib/kokoro";
+
+const wav = await speak(
+  "The first move is what sets everything in motion.",
+  { voice: "af_heart", speed: 1 },
+);`}</code>
+            </pre>
+          </div>
+          <div>
+            <p className="mb-2 text-[12px] font-medium uppercase tracking-wider text-muted">Returns</p>
+            <pre className="overflow-x-auto rounded-xl border border-line bg-canvas p-4 text-[12.5px] leading-relaxed">
+              <code>{`Blob — audio/wav, 24kHz mono
+
+URL.createObjectURL(wav)`}</code>
+            </pre>
+          </div>
+        </div>
+
+        <ul className="mt-5 space-y-2">
+          {[
+            "voice is a Kokoro id such as af_heart or bf_emma — the ids on the Voices page, not display names.",
+            "speed is 0.5 to 2, and it is the only delivery control the model has. There is no style or emotion argument, so none is offered.",
+            "The first call downloads roughly 80MB of weights; pass onProgress to report that, then never again on this browser.",
+            "Generation runs on WebGPU where the browser has it and falls back to WASM where it does not.",
+          ].map((note) => (
+            <li key={note} className="flex gap-2.5 text-[13.5px] leading-relaxed text-muted">
+              <span aria-hidden>—</span>
+              <span>{note}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <h2 className="mt-20 text-[20px] font-medium">Server endpoints</h2>
 
       <nav className="mt-8 flex flex-wrap gap-2">
         {ENDPOINTS.map((endpoint) => (

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ErrorNote, PageHeader, Panel } from "@/components/Page";
 import { DEFAULT_SYSTEM, type ChatMessage, type ToolRun } from "@/lib/agent";
 import { DEFAULT_VOICE, VOICES } from "@/lib/voices";
+import { speak } from "@/lib/kokoro";
 import { useSpeechInput } from "@/components/useSpeechInput";
 
 interface Turn extends ChatMessage {
@@ -33,13 +34,9 @@ export function AgentsScreen() {
 
   async function say(text: string) {
     try {
-      const response = await fetch("/api/speech", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, voice }),
-      });
-      if (!response.ok) return; // A silent reply still reads fine on screen.
-      const url = URL.createObjectURL(await response.blob());
+      // Spoken in this tab. The reply is already on screen by the time this
+      // runs, so a failure here costs the voice and nothing else.
+      const url = URL.createObjectURL(await speak(text, { voice }));
       const audio = (audioRef.current ??= new Audio());
       audio.pause();
       audio.src = url;

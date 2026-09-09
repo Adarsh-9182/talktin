@@ -5,17 +5,15 @@ import { useState } from "react";
 import { HeroDemo } from "@/components/HeroDemo";
 import { ResolutionChart } from "./ResolutionChart";
 
-const SNIPPET = `const response = await fetch("https://talktin.app/api/speech", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    text: "The first move is what sets everything in motion.",
-    voice: "Achird",
-    style: "Read this with quiet confidence",
-  }),
-});
+const SNIPPET = `import { speak } from "@/lib/kokoro";
 
-const audio = await response.blob(); // audio/wav`;
+const wav = await speak(
+  "The first move is what sets everything in motion.",
+  { voice: "af_heart", speed: 1 },
+);
+
+// Blob, audio/wav. No key, no network, no quota —
+// the model ran in this tab.`;
 
 const TABS = [
   { id: "studio", label: "Studio", dot: "bg-orange-400" },
@@ -49,7 +47,7 @@ export function ProductTabs() {
         {active === "studio" && (
           <div>
             <p className="mb-4 text-[13px] text-muted">
-              Ultra-realistic speech, directed in words rather than sliders.
+              Speech generated on your own machine. Nothing you type is uploaded.
             </p>
             <HeroDemo />
           </div>
@@ -84,7 +82,7 @@ export function ProductTabs() {
         {active === "api" && (
           <div>
             <p className="mb-4 text-[13px] text-muted">
-              Every screen here is built on the same routes you can call yourself.
+              The same call the composer makes. It runs in your page, not on our server.
             </p>
             <pre className="overflow-x-auto rounded-2xl border border-line bg-canvas p-5 text-[12.5px] leading-relaxed">
               <code>{SNIPPET}</code>
