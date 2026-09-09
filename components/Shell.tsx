@@ -19,21 +19,36 @@ export function Logo({ className = "" }: { className?: string }) {
   );
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
+function NavLink({ item, active, gated = false }: { item: NavItem; active: boolean; gated?: boolean }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`block rounded-lg px-2 py-1.5 text-[13.5px] transition-colors ${
+      className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13.5px] transition-colors ${
         active ? "bg-canvas font-medium text-ink" : "text-muted hover:text-ink"
       }`}
     >
-      {item.label}
+      <span>{item.label}</span>
+      {gated && (
+        // Marked, not hidden. Someone running their own copy can turn this on,
+        // and hiding it would make the product look smaller than it is.
+        <span
+          title="Needs a server key, which this deployment does not have"
+          className="rounded-full border border-line px-1.5 py-px text-[10px] font-normal text-muted"
+        >
+          key
+        </span>
+      )}
     </Link>
   );
 }
 
-export function Shell({ children }: { children: React.ReactNode }) {
+/**
+ * `hostedConfigured` is read on the server and passed down, because the answer
+ * lives in an environment variable a client component must never touch. When
+ * it is false the three hosted tools carry a marker.
+ */
+export function Shell({ children, hostedConfigured }: { children: React.ReactNode; hostedConfigured: boolean }) {
   const pathname = usePathname();
   const [searching, setSearching] = useState(false);
 
@@ -80,7 +95,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <ul className="space-y-0.5">
               {TOOLS.map((item) => (
                 <li key={item.label}>
-                  <NavLink item={item} active={pathname === item.href} />
+                  <NavLink
+                    item={item}
+                    active={pathname === item.href}
+                    gated={item.hosted === true && !hostedConfigured}
+                  />
                 </li>
               ))}
             </ul>
@@ -90,7 +109,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="mt-4 rounded-xl border border-line bg-canvas p-3">
           <p className="text-[12.5px] font-medium">Run it yourself</p>
           <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-            Clone the repo, bring your own key, keep your audio local.
+            Speech already runs on your machine. A key adds the other three.
           </p>
           <a
             href="https://github.com/Adarsh-9182/talktin"

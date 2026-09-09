@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
-import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 
-export const alt = `${SITE_NAME} — AI voice studio`;
+export const alt = `${SITE_NAME} — ${SITE_TAGLINE}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -29,11 +29,13 @@ export default function Image() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 92, fontWeight: 600, letterSpacing: -3, lineHeight: 1.02, color: "#09090b" }}>
-            Give your words
+          {/* The same claim as the hero, because a link preview that promises
+              something else is the first broken promise a visitor gets. */}
+          <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -3, lineHeight: 1.04, color: "#09090b" }}>
+            Nothing you type
           </div>
-          <div style={{ fontSize: 92, fontWeight: 600, letterSpacing: -3, lineHeight: 1.02, color: "#09090b" }}>
-            a voice
+          <div style={{ fontSize: 84, fontWeight: 600, letterSpacing: -3, lineHeight: 1.04, color: "#09090b" }}>
+            ever leaves this tab
           </div>
         </div>
 

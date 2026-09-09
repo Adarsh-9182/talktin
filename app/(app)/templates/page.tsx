@@ -8,7 +8,7 @@ export default function Templates() {
     <div className="mx-auto w-full max-w-4xl px-6 pb-24 pt-10">
       <PageHeader
         title="Templates"
-        subtitle="Each one fills the composer with text, a voice, and the direction that suits it. Change anything before you generate."
+        subtitle="Each one fills the composer with text, a voice, and the pace that suits it. Change anything before you generate."
       />
 
       <ul className="mt-8 grid gap-3 sm:grid-cols-2">

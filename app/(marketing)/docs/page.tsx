@@ -38,6 +38,8 @@ const ENDPOINTS = [
       "The three stages are sequential — each needs the previous one's words — so progress is streamed rather than withheld until the end.",
       "Validation answers with an ordinary status code before the stream opens; a failure after that arrives as a final {\"stage\":\"failed\",\"error\":\"…\"} line.",
       "Translation is asked for roughly the source's spoken length, so the dub still fits the original timing.",
+      "This endpoint needs GEMINI_API_KEY. Without one it answers 503 and the Dubbing page does not render its interface at all.",
+      "voice names the hosted model's own catalogue — Sulafat, Charon, Kore — not the on-device voices at /voices. They are different engines and the names do not overlap.",
     ],
   },
   {
@@ -64,7 +66,7 @@ const ENDPOINTS = [
 const ERRORS = [
   { code: "400", meaning: "Something about the request needs fixing. The message says what." },
   { code: "429", meaning: "The free tier's quota is spent. Wait, then retry — the request was fine." },
-  { code: "500", meaning: "GEMINI_API_KEY is not set on the server. Speech is unaffected — it does not use one." },
+  { code: "503", meaning: "GEMINI_API_KEY is not set, so this deployment cannot run the hosted half. Speech is unaffected — it does not use one." },
   { code: "502", meaning: "The model failed or returned nothing usable." },
 ];
 
