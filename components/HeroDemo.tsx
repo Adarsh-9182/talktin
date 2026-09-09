@@ -22,11 +22,50 @@ const LINES = [
  */
 const PICKS = ["af_heart", "af_bella", "af_nicole", "bf_emma"];
 
+/**
+ * What one generation actually cost the network, read off the browser's own
+ * resource timeline rather than asserted in marketing copy.
+ *
+ * The claim this page makes — that the text never leaves the machine — is the
+ * kind of thing every product says and nobody can check. So it is measured
+ * here instead: every resource entry the browser records between the start
+ * and end of a generation is counted. The first press downloads the model and
+ * honestly says so. The second press is zero, and a visitor who does not
+ * believe it can open DevTools, or pull the Wi-Fi, and get the same answer.
+ *
+ * Byte counts are deliberately not shown. transferSize is zeroed for
+ * cross-origin responses without Timing-Allow-Origin, and the CDN the weights
+ * come from does not send one, so a byte figure here would read as "0 bytes"
+ * during an 80MB download. A request count has no such hole.
+ */
+type Cost = { requests: number; ms: number };
+
+async function measure<T>(work: () => Promise<T>): Promise<[T, Cost | null]> {
+  // Older Safari has no resource timeline; the demo still works, it just
+  // cannot make the claim, and an unproven claim is not shown at all.
+  if (typeof performance?.getEntriesByType !== "function") return [await work(), null];
+
+  const before = performance.getEntriesByType("resource").length;
+  const started = performance.now();
+  const result = await work();
+
+  return [
+    result,
+    {
+      requests: performance.getEntriesByType("resource").length - before,
+      ms: Math.round(performance.now() - started),
+    },
+  ];
+}
+
 export function HeroDemo() {
   const [line, setLine] = useState(0);
   const [voice, setVoice] = useState(PICKS[0]!);
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
   const [error, setError] = useState<string | null>(null);
+  /** Percent of the one-time weight download, or null when nothing is loading. */
+  const [load, setLoad] = useState<number | null>(null);
+  const [cost, setCost] = useState<Cost | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => () => audioRef.current?.pause(), []);
@@ -42,7 +81,15 @@ export function HeroDemo() {
     setError(null);
 
     try {
-      const blob = await speak(LINES[line]!.text, { voice, speed: LINES[line]!.speed });
+      const [blob, measured] = await measure(() =>
+        speak(LINES[line]!.text, {
+          voice,
+          speed: LINES[line]!.speed,
+          onProgress: (progress) => setLoad(progress.percent),
+        }),
+      );
+      setLoad(null);
+      setCost(measured);
 
       const url = URL.createObjectURL(blob);
       const audio = (audioRef.current ??= new Audio());
@@ -55,6 +102,7 @@ export function HeroDemo() {
       setState("playing");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
+      setLoad(null);
       setState("idle");
     }
   }
@@ -72,7 +120,13 @@ export function HeroDemo() {
           disabled={state === "loading"}
           className="rounded-full bg-ink px-5 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-40"
         >
-          {state === "loading" ? "Generating…" : state === "playing" ? "❙❙ Pause" : "▶ Play"}
+          {state !== "loading"
+            ? state === "playing"
+              ? "❙❙ Pause"
+              : "▶ Play"
+            : load !== null
+              ? `Loading voice… ${load}%`
+              : "Generating…"}
         </button>
 
         <select
@@ -102,6 +156,18 @@ export function HeroDemo() {
           Another line
         </button>
       </div>
+
+      {/*
+        The receipt. Shown only once there is a real measurement to show —
+        a number the browser produced, not a promise this page made.
+      */}
+      {cost && (
+        <p aria-live="polite" className="mt-4 border-t border-line pt-3 font-mono text-[11.5px] text-muted">
+          {cost.requests === 0
+            ? `${cost.ms}ms · 0 network requests · nothing left this machine`
+            : `${cost.ms}ms · ${cost.requests} requests to fetch the model, once · the next one is 0`}
+        </p>
+      )}
 
       {error && <p className="mt-3 text-[12.5px] text-red-600">{error}</p>}
     </div>

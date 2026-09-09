@@ -1,46 +1,70 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { VOICES } from "@/lib/voices";
 
 export const metadata: Metadata = {
   title: "Pricing — Talktin",
-  description: "What Talktin costs to run, and what the models underneath it cost.",
+  description:
+    "Speech is free with no account and no key, because it runs on your machine. Here is exactly where that stops being true.",
 };
 
+/*
+ * This page used to open by telling every visitor to bring an API key. That is
+ * no longer true of the thing most of them came for: speech runs in the
+ * browser, so it costs nothing and needs nothing. A key only buys the three
+ * tools that still call a hosted model, and the tiers are shaped to say so
+ * rather than to bury it.
+ */
 const TIERS = [
   {
-    name: "Self-hosted",
+    name: "Just use it",
     price: "Free",
-    note: "What this repository is",
-    blurb: "Clone it, bring your own Gemini key, and run the whole product locally or on a free Vercel plan.",
+    note: "No account, nothing to enter",
+    blurb: "Open the studio and generate. The model downloads once to your browser and the work happens there, so there is nothing for us to meter.",
     features: [
-      "Every tool: speech, dubbing, transcription, agents",
-      "All 30 voices",
-      "Your API key, your quota, your data",
-      "No account, no billing, no limits we impose",
+      "Text to speech and long-form Studio",
+      `All ${VOICES.length} voices, with the model author's grades shown`,
+      "Unlimited characters — there is no counter",
+      "Your text never leaves the tab",
     ],
-    action: { href: "https://github.com/Adarsh-9182/talktin", label: "Clone the repo" },
+    action: { href: "/text-to-speech", label: "Open the studio" },
     emphasis: true,
   },
   {
-    name: "Hosted",
+    name: "Self-hosted",
+    price: "Free + your key",
+    note: "What this repository is",
+    blurb: "Clone it and add a Gemini key to unlock the three tools that still need a server. The key is yours, so the bill and the data are too.",
+    features: [
+      "Everything above, unchanged",
+      "Dubbing, transcription, and agents",
+      "Your API key, your quota, your logs",
+      "Runs on a free Vercel plan",
+    ],
+    action: { href: "https://github.com/Adarsh-9182/talktin", label: "Clone the repo" },
+    emphasis: false,
+  },
+  {
+    name: "Hosted accounts",
     price: "Not yet",
     note: "Honest about what does not exist",
-    blurb: "There is no hosted plan to sell you. When there is an account system and a billing integration, it will be listed here.",
+    blurb: "There is no paid plan to sell you. When there is an account system and a billing integration, it will be listed here.",
     features: [
       "Saved projects and history",
       "Team access",
       "Usage dashboards",
       "Support commitments",
     ],
-    action: { href: "/text-to-speech", label: "Use the studio meanwhile" },
+    action: { href: "/docs", label: "Read the docs meanwhile" },
     emphasis: false,
   },
 ];
 
 const COSTS = [
-  { item: "Speech generation", cost: "Free tier, then per million audio tokens", who: "Google AI Studio" },
-  { item: "Transcription and translation", cost: "Free tier, then per million tokens", who: "Google AI Studio" },
+  { item: "Speech generation", cost: "Free, at any volume — it runs on your machine", who: "Kokoro-82M, Apache-2.0" },
+  { item: "The one-time model download", cost: "Roughly 80MB, cached by your browser", who: "Hugging Face CDN" },
   { item: "Speech recognition in agents", cost: "Free — it runs in your browser", who: "Web Speech API" },
+  { item: "Dubbing, transcription, agent replies", cost: "Free tier, then per million tokens", who: "Google AI Studio" },
   { item: "Hosting", cost: "Free tier", who: "Vercel" },
 ];
 
@@ -51,12 +75,13 @@ export default function Pricing() {
         <h1 className="text-[44px] font-semibold leading-[1.05] tracking-[-0.03em]">
           Pricing
         </h1>
-        <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-muted">
-          Talktin is free because it does not host anything for you. You bring a key, the models bill you
-          directly, and most people never leave the free tier.
+        <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-muted">
+          Speech costs nothing here and never will, because we are not the ones generating it — your
+          browser is. A key buys the three tools that still call a hosted model, and nothing else. The
+          table below is the whole of it.
         </p>
 
-        <div className="mt-12 grid gap-4 lg:grid-cols-2">
+        <div className="mt-12 grid gap-4 lg:grid-cols-3">
           {TIERS.map((tier) => (
             <div
               key={tier.name}

@@ -5,7 +5,7 @@ import { PageHeader, Panel } from "@/components/Page";
 import { VoicePreview } from "@/components/VoicePreview";
 import { VOICES, type Voice } from "@/lib/voices";
 
-/** Every voice gets a page at build time; there are thirty and they never move. */
+/** Every voice gets a page at build time; the catalogue is fixed and small. */
 export function generateStaticParams() {
   return VOICES.map((voice) => ({ id: voice.id.toLowerCase() }));
 }
@@ -18,7 +18,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const voice = find((await params).id);
   if (!voice) return { title: "Voice not found" };
 
-  const description = `Hear ${voice.name}, a ${voice.character.toLowerCase()} AI voice, reading narration, an advert, and dialogue in 90+ languages.`;
+  // "in 90+ languages" stood here against an engine that speaks two, and it
+  // was the description search engines were being handed for all 28 pages.
+  const description = `Hear ${voice.name}, a ${voice.character.toLowerCase()} AI voice, reading narration, an advert, and dialogue. Generated in your browser — free, and nothing is uploaded.`;
   return {
     title: `${voice.name} — ${voice.character} AI voice`,
     description,
@@ -30,17 +32,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 const LINES = [
   {
     label: "Narration",
-    style: "Read this warmly and unhurried",
     text: "In the ancient land of Eldoria, where the skies shimmered and the forests whispered their secrets to the wind, there lived a dragon who had never once frightened anybody.",
   },
   {
     label: "Advert",
-    style: "Read this with bright, confident energy",
     text: "Switching is the easy part. Bring your team over in an afternoon, keep every file where it was, and pay nothing until you are sure.",
   },
   {
     label: "Conversation",
-    style: "Read this in a friendly, matter-of-fact way",
     text: "That order was delivered last Tuesday, so it still qualifies for a refund. I can start that for you now if you like.",
   },
 ];

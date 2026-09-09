@@ -9,6 +9,6 @@ export const SITE_URL = (() => {
 })();
 
 export const SITE_NAME = "Talktin";
-export const SITE_TAGLINE = "AI voice studio";
+export const SITE_TAGLINE = "The voice studio that runs in your browser";
 export const SITE_DESCRIPTION =
-  "Turn text into natural speech in 90+ languages, dub video into any language, transcribe recordings, and deploy agents that talk.";
+  "Turn text into speech without sending it anywhere. Talktin runs an open speech model inside your own browser: 28 voices, no account, no API key, no character quota, and nothing uploaded.";

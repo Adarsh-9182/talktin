@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { Logo } from "@/components/Shell";
 
+/*
+ * "Solutions" and "Research" were here because the site being copied has them,
+ * not because anything sits behind either word. They point at the two
+ * questions a visitor actually arrives with: what runs where, and what it
+ * costs.
+ */
 const NAV = [
-  { href: "/text-to-speech", label: "Products" },
-  { href: "/#platforms", label: "Solutions" },
-  { href: "/#research", label: "Research" },
+  { href: "/text-to-speech", label: "Studio" },
+  { href: "/voices", label: "Voices" },
+  { href: "/#platforms", label: "What runs locally" },
   { href: "/pricing", label: "Pricing" },
 ];
 
@@ -29,10 +35,10 @@ const FOOTER = [
     ],
   },
   {
-    heading: "API",
+    heading: "Reference",
     links: [
       { href: "/docs", label: "API Reference" },
-      { href: "/docs#speech", label: "Text to Speech API" },
+      { href: "/docs#speech", label: "On-device speak()" },
       { href: "/docs#transcribe", label: "Speech to Text API" },
       { href: "/docs#dub", label: "Dubbing API" },
       { href: "/docs#agent", label: "Agents API" },

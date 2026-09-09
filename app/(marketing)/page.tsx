@@ -1,44 +1,70 @@
 import Link from "next/link";
 import { ProductTabs } from "@/components/marketing/ProductTabs";
-import { LANGUAGES } from "@/lib/languages";
 import { VOICES } from "@/lib/voices";
 
+/*
+ * This page used to sell a different product. It promised speech in 90+
+ * languages, direction in plain words, and four tools on one foundation —
+ * all of it describing a hosted model behind an API key that has never
+ * existed in this repository. Every number was unfalsifiable and most were
+ * wrong.
+ *
+ * What is actually here is narrower and, unusually, provable: a speech model
+ * that runs inside the visitor's own browser. So the page argues the one
+ * thing a metered cloud API cannot answer — your words never leave your
+ * machine — and it puts the receipt in the hero rather than a testimonial.
+ */
+
+/** Four numbers, each of which a visitor could check without trusting us. */
 const STATS = [
-  { value: `${VOICES.length}`, label: "prebuilt voices" },
-  { value: `${LANGUAGES.length}+`, label: "languages to dub into" },
-  { value: "4", label: "tools on one foundation" },
-  { value: "₹0", label: "to run it yourself" },
+  { value: `${VOICES.length}`, label: "voices, running on your machine" },
+  { value: "₹0", label: "per character, at any volume" },
+  { value: "0", label: "bytes of your text uploaded" },
+  { value: "once", label: "the model downloads, then never again" },
 ];
 
-const STUDIO_FEATURES = [
-  { name: "Direction, not sliders", blurb: "Say “read this like a documentary narrator”. The model takes performance notes in words, so that is where the control lives." },
-  { name: "Dubbing that fits", blurb: "Translation is asked for the same spoken length as the source, so the dub still lands inside the video it came from." },
-  { name: "Speakers separated", blurb: "Transcripts come back with each voice labelled, not as one undivided wall of text." },
-  { name: "Previews before you write", blurb: `All ${VOICES.length} voices are auditionable on one page, and each preview is cached for the session.` },
+const LOCAL_FACTS = [
+  {
+    name: "It works with the Wi-Fi off",
+    blurb: "Once the weights are cached, generation is a function call on your own CPU or GPU. Disconnect and press play — that is the test, and it passes.",
+  },
+  {
+    name: "No account, no key, no quota",
+    blurb: "There is no meter to run down, because there is no server doing the work. The hundredth minute of audio costs exactly what the first one did.",
+  },
+  {
+    name: "Long-form is blocks, not batches",
+    blurb: "A block per paragraph or speaker, each with its own voice and speed, joined into one file in the browser. A block that fails is retried alone.",
+  },
+  {
+    name: `All ${VOICES.length} voices are auditionable`,
+    blurb: "Every voice is on one page with the model author's own quality grade next to it, including the unflattering ones. Play before you write a word.",
+  },
 ];
 
-const AGENT_FEATURES = [
-  { name: "Testing", blurb: "Talk to the agent with the instructions you are about to ship, and watch which tools it reaches for." },
-  { name: "Guardrails", blurb: "Tools decide what is possible. A refund cannot be started on an order the tool says is still in transit." },
-  { name: "Workflows", blurb: "Tools are ordinary functions, so an agent can look something up, check a policy, and act in one turn." },
+/** The honest half. These need a server and a key, and the page says so. */
+const HOSTED = [
+  { name: "Dubbing", blurb: "Transcribe a clip, translate it to roughly the same spoken length, and speak the result." },
+  { name: "Transcription", blurb: "Speaker-separated transcripts from an audio or video file." },
+  { name: "Agents", blurb: "Tool-calling conversations, with every tool the agent reached for printed under the reply." },
 ];
 
-const MODELS = [
-  { name: "Speech", detail: "Low-latency speech in 90+ languages, directed in plain words.", meta: "gemini-2.5-flash-preview-tts" },
-  { name: "Transcription", detail: "Speaker-separated transcripts from audio or video files.", meta: "gemini-2.5-flash" },
-  { name: "Agents", detail: "Tool-calling conversations with every call recorded.", meta: "gemini-2.5-flash" },
+const ENGINE = [
+  { name: "Kokoro-82M", detail: "82 million parameters, Apache-2.0, quantised to 8-bit. Small enough to ship to a browser, good enough that one of its voices is graded A.", meta: "onnx-community/Kokoro-82M-v1.0-ONNX" },
+  { name: "ONNX Runtime Web", detail: "WebGPU where the browser has it, which is roughly an order of magnitude faster, and WASM everywhere else.", meta: "webgpu · wasm fallback" },
+  { name: "American and British English", detail: "Two accents, done properly, instead of a long language list the model cannot actually deliver.", meta: "en-us · en-gb" },
 ];
 
 const SAFETY = [
-  { name: "Provenance", blurb: "Generated audio is generated audio. Nothing here presents a synthetic voice as a recording of a real person.", icon: "circles" },
-  { name: "No cloning", blurb: "Only the model's prebuilt voices are offered. There is no path here to copy a voice from a sample.", icon: "cube" },
-  { name: "Accountability", blurb: "Agents show every tool they called, so a wrong answer can be traced instead of argued about.", icon: "cone" },
+  { name: "Nothing to leak", blurb: "There is no server-side copy of your text or your audio, because neither was ever sent anywhere. Privacy here is an architecture, not a policy page.", icon: "circles" },
+  { name: "No cloning", blurb: "Only the model's prebuilt voices are offered. There is no path here to copy a voice from a sample of someone who did not agree.", icon: "cube" },
+  { name: "Provenance", blurb: "Generated audio is generated audio. Nothing here presents a synthetic voice as a recording of a real person.", icon: "cone" },
 ] as const;
 
 const UPDATES = [
-  { title: "Dubbing keeps the timing", date: "Sep 7, 2026", blurb: "Translation now asks for the same spoken length as the source." },
-  { title: "Agents show their tools", date: "Sep 7, 2026", blurb: "Every tool call is printed under the reply that used it." },
-  { title: "Validation before the provider", date: "Sep 7, 2026", blurb: "Bad requests get a 400 that says what to fix, not a 502." },
+  { title: "Speech moved into the browser", date: "Sep 9, 2026", blurb: "Kokoro-82M replaced a hosted model that needed a key nobody had. The audio path runs for the first time." },
+  { title: "The controls that did nothing are gone", date: "Sep 9, 2026", blurb: "A free-text direction field was being sent to a model with no such input. It is a speed slider now." },
+  { title: "The endpoint that never ran is deleted", date: "Sep 9, 2026", blurb: "/api/speech is not documented as an endpoint that 500s. Speech is a client call, and the docs say so." },
 ];
 
 function SafetyIcon({ kind }: { kind: (typeof SAFETY)[number]["icon"] }) {
@@ -77,25 +103,26 @@ export default function Landing() {
       <section className="mx-auto max-w-6xl px-6 pb-16 pt-20 sm:pt-28">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
           <h1 className="text-[46px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[68px]">
-            Give your words
+            Nothing you type
             <br />
-            a voice
+            ever leaves this tab
           </h1>
 
           <div className="lg:pt-4">
             <p className="max-w-md text-[16.5px] leading-relaxed text-muted">
-              Speech in 90+ languages, dubbing that keeps the timing, transcription that separates
-              speakers, and agents that talk back. Built on free-tier models, in the open.
+              Talktin is a voice studio whose speech model runs inside your browser. No account, no key,
+              no character quota — and no upload. Press play below, then open your network tab and watch
+              it make no requests.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/text-to-speech" className="rounded-full bg-ink px-5 py-2.5 text-[14px] font-medium text-white">
                 Open the studio
               </Link>
               <Link
-                href="/agents"
+                href="/voices"
                 className="rounded-full border border-line px-5 py-2.5 text-[14px] transition-colors hover:border-ink/30"
               >
-                Talk to an agent
+                Hear all {VOICES.length} voices
               </Link>
             </div>
           </div>
@@ -118,23 +145,27 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Two platforms */}
+      {/* The split: what runs here, and what does not */}
       <section id="platforms" className="mx-auto max-w-6xl scroll-mt-20 px-6 py-20">
-        <h2 className="max-w-lg text-[32px] font-semibold leading-[1.15] tracking-[-0.025em]">
-          Two platforms built on the
+        <h2 className="max-w-xl text-[32px] font-semibold leading-[1.15] tracking-[-0.025em]">
+          Speech runs on your machine.
           <br />
-          same speech foundation
+          Three other things do not.
         </h2>
+        <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-muted">
+          Saying which is which is the whole point. A product that blurs the line is asking you to take
+          its privacy claim on faith, and this one would rather be checkable.
+        </p>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
           <div className="rounded-3xl border border-line bg-canvas p-7">
-            <p className="text-[12px] font-medium uppercase tracking-wider text-muted">Studio</p>
-            <h3 className="mt-2 text-[20px] font-medium">Create, dub, and transcribe in one place</h3>
+            <p className="text-[12px] font-medium uppercase tracking-wider text-muted">On your machine</p>
+            <h3 className="mt-2 text-[20px] font-medium">Speech, and everything built on it</h3>
             <ul className="mt-6 space-y-5">
-              {STUDIO_FEATURES.map((feature) => (
-                <li key={feature.name}>
-                  <p className="text-[14.5px] font-medium">{feature.name}</p>
-                  <p className="mt-1 text-[13.5px] leading-relaxed text-muted">{feature.blurb}</p>
+              {LOCAL_FACTS.map((fact) => (
+                <li key={fact.name}>
+                  <p className="text-[14.5px] font-medium">{fact.name}</p>
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-muted">{fact.blurb}</p>
                 </li>
               ))}
             </ul>
@@ -147,34 +178,40 @@ export default function Landing() {
           </div>
 
           <div id="agents" className="scroll-mt-20 rounded-3xl border border-line bg-canvas p-7">
-            <p className="text-[12px] font-medium uppercase tracking-wider text-muted">Agents</p>
-            <h3 className="mt-2 text-[20px] font-medium">Deploy agents that talk, and take action</h3>
+            <p className="text-[12px] font-medium uppercase tracking-wider text-muted">Needs a server</p>
+            <h3 className="mt-2 text-[20px] font-medium">Dubbing, transcription, and agents</h3>
+            <p className="mt-4 text-[13.5px] leading-relaxed text-muted">
+              These three send your file or your message to a hosted model, so they need a{" "}
+              <code className="font-mono text-[12.5px]">GEMINI_API_KEY</code> on the server — and the
+              privacy claim above does not cover them. Run your own copy and they are yours; on this
+              deployment they are honest about needing one.
+            </p>
             <ul className="mt-6 space-y-5">
-              {AGENT_FEATURES.map((feature) => (
-                <li key={feature.name}>
-                  <p className="text-[14.5px] font-medium">{feature.name}</p>
-                  <p className="mt-1 text-[13.5px] leading-relaxed text-muted">{feature.blurb}</p>
+              {HOSTED.map((tool) => (
+                <li key={tool.name}>
+                  <p className="text-[14.5px] font-medium">{tool.name}</p>
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-muted">{tool.blurb}</p>
                 </li>
               ))}
             </ul>
-            <Link
-              href="/agents"
+            <a
+              href="https://github.com/Adarsh-9182/talktin"
               className="mt-7 inline-block rounded-full border border-line bg-surface px-5 py-2.5 text-[13.5px] transition-colors hover:border-ink/30"
             >
-              Try the support agent
-            </Link>
+              Run your own copy
+            </a>
           </div>
         </div>
       </section>
 
-      {/* API */}
+      {/* The engine, named */}
       <section id="api" className="border-t border-line bg-canvas">
         <div className="mx-auto max-w-6xl scroll-mt-20 px-6 py-20">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <h2 className="max-w-lg text-[32px] font-semibold leading-[1.15] tracking-[-0.025em]">
-              Or build anything
+              The engine, named
               <br />
-              on the same endpoints
+              so you can go and check it
             </h2>
             <Link
               href="/docs"
@@ -185,14 +222,21 @@ export default function Landing() {
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
-            {MODELS.map((model) => (
-              <div key={model.name} className="rounded-2xl border border-line bg-surface p-6">
-                <h3 className="text-[15px] font-medium">{model.name}</h3>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{model.detail}</p>
-                <p className="mt-4 font-mono text-[11.5px] text-muted">{model.meta}</p>
+            {ENGINE.map((part) => (
+              <div key={part.name} className="rounded-2xl border border-line bg-surface p-6">
+                <h3 className="text-[15px] font-medium">{part.name}</h3>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-muted">{part.detail}</p>
+                <p className="mt-4 font-mono text-[11.5px] text-muted">{part.meta}</p>
               </div>
             ))}
           </div>
+
+          <p className="mt-8 max-w-2xl text-[13.5px] leading-relaxed text-muted">
+            It is not ElevenLabs v3, and pretending otherwise would be the fastest way to lose your
+            trust in the first ten seconds. It is a small, open model that is free forever, private by
+            construction, and instant once it has loaded — which is a trade some work wants and no
+            metered API can offer.
+          </p>
         </div>
       </section>
 
@@ -224,13 +268,17 @@ export default function Landing() {
             </a>
           </div>
 
+          {/*
+            Each of these had a decorative gradient rectangle above it, standing
+            in for a screenshot that was never taken. A grey box that means
+            nothing is worse than no box, so the date leads instead.
+          */}
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             {UPDATES.map((update) => (
               <article key={update.title} className="rounded-2xl border border-line bg-surface p-6">
-                <div aria-hidden className="mb-5 h-28 rounded-xl bg-gradient-to-br from-zinc-100 to-zinc-200" />
-                <h3 className="text-[15px] font-medium leading-snug">{update.title}</h3>
+                <p className="font-mono text-[11.5px] uppercase tracking-wider text-muted">{update.date}</p>
+                <h3 className="mt-3 text-[15px] font-medium leading-snug">{update.title}</h3>
                 <p className="mt-2 text-[13px] leading-relaxed text-muted">{update.blurb}</p>
-                <p className="mt-4 text-[12px] text-muted">{update.date}</p>
               </article>
             ))}
           </div>
@@ -240,7 +288,9 @@ export default function Landing() {
       {/* Closing CTA */}
       <section className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-6 py-16">
-          <h2 className="text-[28px] font-semibold tracking-[-0.025em]">AI voice platform</h2>
+          <h2 className="max-w-md text-[28px] font-semibold leading-[1.15] tracking-[-0.025em]">
+            No signup. Type something and press play.
+          </h2>
           <div className="flex flex-wrap gap-3">
             <Link
               href="/docs"
@@ -248,8 +298,8 @@ export default function Landing() {
             >
               Read the docs
             </Link>
-            <Link href="/agents" className="rounded-full bg-ink px-6 py-2.5 text-[14px] font-medium text-white">
-              Create an agent
+            <Link href="/text-to-speech" className="rounded-full bg-ink px-6 py-2.5 text-[14px] font-medium text-white">
+              Open the studio
             </Link>
           </div>
         </div>

@@ -38,6 +38,7 @@ const ENDPOINTS = [
       "The three stages are sequential — each needs the previous one's words — so progress is streamed rather than withheld until the end.",
       "Validation answers with an ordinary status code before the stream opens; a failure after that arrives as a final {\"stage\":\"failed\",\"error\":\"…\"} line.",
       "Translation is asked for roughly the source's spoken length, so the dub still fits the original timing.",
+      "This endpoint needs GEMINI_API_KEY, and its voice argument still names the hosted model's catalogue rather than the on-device one. Both are being dealt with; until then it is documented as it behaves, not as it should.",
     ],
   },
   {
