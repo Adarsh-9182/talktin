@@ -1,7 +1,9 @@
 import { BadRequest, explain, readUpload, speak, transcribe, translate } from "@/lib/audio";
 import { languageLabel } from "@/lib/languages";
 import { guard } from "@/lib/limit";
-import { DEFAULT_VOICE, findVoice } from "@/lib/voices";
+// Not lib/voices — that catalogue is the on-device engine's, and this route
+// talks to a hosted model with entirely different voice names.
+import { DEFAULT_HOSTED_VOICE, findHostedVoice } from "@/lib/hosted-voices";
 import { pcmToWav } from "@/lib/wav";
 
 export const runtime = "nodejs";
@@ -24,7 +26,7 @@ type Event =
 
 export async function POST(request: Request) {
   let language: string | undefined;
-  let voice = DEFAULT_VOICE;
+  let voice = DEFAULT_HOSTED_VOICE;
   let base64: string;
   let mimeType: string;
 
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
 
     language = languageLabel(String(upload.form.get("language") ?? ""));
     if (!language) throw new BadRequest("Pick a language to dub into.");
-    voice = findVoice(String(upload.form.get("voice") ?? ""))?.id ?? DEFAULT_VOICE;
+    voice = findHostedVoice(String(upload.form.get("voice") ?? ""))?.id ?? DEFAULT_HOSTED_VOICE;
   } catch (error) {
     const { message, status } = explain(error);
     return Response.json({ error: message }, { status });

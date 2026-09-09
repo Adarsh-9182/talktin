@@ -5,7 +5,9 @@ import { Dropzone } from "@/components/Dropzone";
 import { ErrorNote, PageHeader, Panel } from "@/components/Page";
 import { DEFAULT_LANGUAGE, LANGUAGES, languageLabel } from "@/lib/languages";
 import { readNdjson } from "@/lib/ndjson";
-import { DEFAULT_VOICE, VOICES } from "@/lib/voices";
+// Dubbing speaks through the hosted model, so it offers that model's voices.
+// Showing the on-device catalogue here sent ids the provider rejects.
+import { DEFAULT_HOSTED_VOICE, HOSTED_VOICES } from "@/lib/hosted-voices";
 
 interface Dub {
   language: string;
@@ -30,7 +32,7 @@ const STEP_INDEX: Record<string, number> = { transcribing: 0, translating: 1, sp
 export function DubbingScreen() {
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState<string>(DEFAULT_LANGUAGE);
-  const [voice, setVoice] = useState(DEFAULT_VOICE);
+  const [voice, setVoice] = useState(DEFAULT_HOSTED_VOICE);
   const [step, setStep] = useState(-1);
   const [error, setError] = useState<string | null>(null);
   const [dub, setDub] = useState<Dub | null>(null);
@@ -128,8 +130,8 @@ export function DubbingScreen() {
               disabled={working}
               className="ml-2 rounded-full border border-line bg-canvas px-3 py-1.5 text-[13px] text-ink outline-none"
             >
-              {VOICES.map((option) => (
-                <option key={option.id} value={option.id}>{option.name}</option>
+              {HOSTED_VOICES.map((option) => (
+                <option key={option.id} value={option.id}>{option.id} — {option.character}</option>
               ))}
             </select>
           </label>

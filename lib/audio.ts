@@ -67,7 +67,10 @@ export function client(): GoogleGenAI {
 export function explain(error: unknown): { message: string; status: number } {
   const message = error instanceof Error ? error.message : String(error);
   if (error instanceof BadRequest) return { message, status: 400 };
-  if (/GEMINI_API_KEY/.test(message)) return { message, status: 500 };
+  // 503, not 500. A missing key is a deployment that was never configured for
+  // this half of the product, which is a different thing from a server that
+  // broke — and the three pages that need one now say so before you get here.
+  if (/GEMINI_API_KEY/.test(message)) return { message, status: 503 };
   if (/\b429\b|quota|rate.?limit/i.test(message)) {
     return { message: "Free-tier quota reached. Wait a minute and try again.", status: 429 };
   }
