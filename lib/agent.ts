@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { client, retryProvider } from "./audio";
+import { client, retryProvider } from "./audio.ts";
 
 export interface ChatMessage {
   role: "user" | "assistant";

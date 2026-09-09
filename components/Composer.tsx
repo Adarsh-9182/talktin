@@ -8,6 +8,7 @@ import { saveAsset } from "@/lib/assets";
 import { clearDraft, loadDraft, saveDraft, type Draft } from "@/lib/draft";
 import { TEMPLATES, findTemplate } from "@/lib/templates";
 import { DEFAULT_VOICE, VOICES, findVoice } from "@/lib/voices";
+import { MAX_SHARED_CHARACTERS, shareUrl } from "@/lib/share";
 
 const MAX_CHARACTERS = 5_000;
 
@@ -24,6 +25,47 @@ interface Clip {
   url: string;
   text: string;
   voice: string;
+  speed: number;
+}
+
+/**
+ * Copies a link that carries the words in its fragment, so sharing a sentence
+ * does not upload it. Falls back to selecting nothing and saying so, rather
+ * than pretending: clipboard access is refused outright in some contexts, and
+ * a button that silently did nothing would be the worst outcome here.
+ */
+function ShareButton({ clip }: { clip: Clip }) {
+  const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const tooLong = clip.text.length > MAX_SHARED_CHARACTERS;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(
+        shareUrl(window.location.origin, { text: clip.text, voice: clip.voice, speed: clip.speed }),
+      );
+      setCopied(true);
+      setFailed(false);
+      setTimeout(() => setCopied(false), 2_000);
+    } catch {
+      setFailed(true);
+    }
+  }
+
+  return (
+    <button
+      onClick={() => void copy()}
+      title={
+        tooLong
+          ? `Only the first ${MAX_SHARED_CHARACTERS} characters travel in a link.`
+          : "A link that plays this sentence. The words ride in the fragment, so they are never uploaded."
+      }
+      className="shrink-0 text-[12px] text-muted transition-colors hover:text-ink"
+    >
+      {failed ? "Copy blocked" : copied ? "Link copied" : tooLong ? "Copy link (first part)" : "Copy link"}
+    </button>
+  );
 }
 
 function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }) {
@@ -68,7 +110,7 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
       setLoad(null);
       const url = URL.createObjectURL(blob);
       urlsRef.current.push(url);
-      setClips((previous) => [{ id: crypto.randomUUID(), url, text: text.trim(), voice }, ...previous]);
+      setClips((previous) => [{ id: crypto.randomUUID(), url, text: text.trim(), voice, speed }, ...previous]);
 
       // Saving is a convenience, so a storage failure must not lose the clip
       // that is already playing on screen.
@@ -221,6 +263,7 @@ function ComposerScreen({ start, restored }: { start: Draft; restored: boolean }
                 </div>
                 <div className="flex items-center gap-3">
                   <audio controls src={clip.url} className="h-9 w-full" />
+                  <ShareButton clip={clip} />
                   <a
                     href={clip.url}
                     download={`talktin-${clip.id.slice(0, 8)}.wav`}

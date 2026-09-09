@@ -13,6 +13,11 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    // Node's test runner resolves through real ESM, so a lib module that is
+    // covered by a test has to import its neighbours with an extension. This
+    // lets the source say `./voices.ts` without tsc objecting; Next already
+    // sets noEmit, which is the only precondition.
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
