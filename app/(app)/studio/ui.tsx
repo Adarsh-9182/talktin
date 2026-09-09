@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ErrorNote, PageHeader, Panel } from "@/components/Page";
 import { saveAsset } from "@/lib/assets";
+import { speak as synthesise } from "@/lib/kokoro";
 import { stitchWav } from "@/lib/stitch";
 import { DEFAULT_VOICE, VOICES } from "@/lib/voices";
 
@@ -10,7 +11,8 @@ interface Block {
   id: string;
   text: string;
   voice: string;
-  style: string;
+  /** 0.5-2. The one delivery control the engine actually has; see Composer. */
+  speed: number;
   status: "idle" | "generating" | "done" | "failed";
   blob?: Blob;
   url?: string;
@@ -21,13 +23,19 @@ const MAX_BLOCKS = 20;
 const MAX_TOTAL = 10_000;
 
 function blank(voice = DEFAULT_VOICE): Block {
-  return { id: crypto.randomUUID(), text: "", voice, style: "", status: "idle" };
+  return { id: crypto.randomUUID(), text: "", voice, speed: 1, status: "idle" };
 }
 
-const SAMPLE: Pick<Block, "text" | "voice" | "style">[] = [
-  { text: "Welcome back to the show. Today we are talking about the one thing nobody warns you about when you start building.", voice: "Charon", style: "Read this like a podcast host opening an episode" },
-  { text: "Which is what, exactly? Because I remember you saying the hard part was the code.", voice: "Leda", style: "Read this with friendly curiosity" },
-  { text: "That is what I thought too. The hard part is deciding what not to build.", voice: "Charon", style: "Read this thoughtfully" },
+/*
+ * Two voices, both graded B- or better, and from different accents so a
+ * listener can tell them apart without being told. The previous sample named
+ * Charon and Leda — Gemini voices that are not in the catalogue any more — so
+ * pressing the sample button produced two blocks the engine would reject.
+ */
+const SAMPLE: Pick<Block, "text" | "voice" | "speed">[] = [
+  { text: "Welcome back to the show. Today we are talking about the one thing nobody warns you about when you start building.", voice: "af_heart", speed: 1 },
+  { text: "Which is what, exactly? Because I remember you saying the hard part was the code.", voice: "bf_emma", speed: 1.05 },
+  { text: "That is what I thought too. The hard part is deciding what not to build.", voice: "af_heart", speed: 0.95 },
 ];
 
 export function StudioScreen() {
@@ -35,6 +43,8 @@ export function StudioScreen() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullUrl, setFullUrl] = useState<string | null>(null);
+  /** Percent of the one-time weight download, or null when nothing is loading. */
+  const [load, setLoad] = useState<number | null>(null);
   const urls = useRef<string[]>([]);
 
   useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), []);
@@ -65,28 +75,29 @@ export function StudioScreen() {
     setFullUrl(null);
   }
 
-  /** One request per block, so a 60-second function limit is never the ceiling. */
+  /*
+   * A block at a time, in this tab. Splitting long-form into blocks was
+   * originally a workaround for a 60-second function limit; now that the
+   * engine is local that ceiling is gone, and the split survives for the
+   * reason it should have existed all along — a block is a paragraph or a
+   * speaker, and one that fails can be retried without redoing the rest.
+   */
   async function speak(block: Block): Promise<boolean> {
     update(block.id, { status: "generating", error: undefined });
 
     try {
-      const response = await fetch("/api/speech", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: block.text, voice: block.voice, style: block.style }),
+      const blob = await synthesise(block.text, {
+        voice: block.voice,
+        speed: block.speed,
+        onProgress: (progress) => setLoad(progress.percent),
       });
-
-      if (!response.ok) {
-        const { error: message } = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(message ?? `Failed (${response.status})`);
-      }
-
-      const blob = await response.blob();
+      setLoad(null);
       const url = URL.createObjectURL(blob);
       urls.current.push(url);
       update(block.id, { status: "done", blob, url });
       return true;
     } catch (caught) {
+      setLoad(null);
       update(block.id, {
         status: "failed",
         error: caught instanceof Error ? caught.message : String(caught),
@@ -102,7 +113,9 @@ export function StudioScreen() {
     setFullUrl(null);
 
     // Sequential, and pending blocks only: a run that stopped halfway should
-    // resume rather than pay for the blocks that already worked.
+    // resume rather than redo the blocks that already worked. Sequential also
+    // matters more now than it did over HTTP — the engine is one model in one
+    // tab, so parallel calls would queue behind each other anyway.
     const pending = blocks.filter((block) => block.text.trim() && block.status !== "done");
     let failed = 0;
     for (const block of pending) {
@@ -201,12 +214,28 @@ export function StudioScreen() {
               className="w-full resize-none bg-transparent px-4 py-3 text-[14.5px] leading-relaxed outline-none placeholder:text-muted/70"
             />
 
-            <input
-              value={block.style}
-              onChange={(event) => edit(block.id, { style: event.target.value })}
-              placeholder="Direction for this block — optional"
-              className="w-full border-t border-line bg-transparent px-4 py-2.5 text-[12.5px] outline-none placeholder:text-muted/70"
-            />
+            {/*
+              A free-text "Direction" box used to sit here and was prepended to
+              the text for a model that took performance notes in the prompt.
+              The engine has no such input, so the field was a control that
+              silently did nothing. Speed is what it does expose.
+            */}
+            <div className="flex items-center gap-3 border-t border-line px-4 py-2.5">
+              <label htmlFor={`speed-${block.id}`} className="text-[12.5px] text-muted">Speed</label>
+              <input
+                id={`speed-${block.id}`}
+                type="range"
+                min={0.5}
+                max={2}
+                step={0.05}
+                value={block.speed}
+                onChange={(event) => edit(block.id, { speed: Number(event.target.value) })}
+                className="h-1 flex-1 accent-ink"
+              />
+              <span className="w-12 text-right font-mono text-[11.5px] text-muted tabular-nums">
+                {block.speed.toFixed(2)}×
+              </span>
+            </div>
 
             {block.url && (
               <div className="border-t border-line px-4 py-2.5">
@@ -248,14 +277,21 @@ export function StudioScreen() {
           disabled={!ready || running}
           className="ml-auto rounded-full bg-ink px-5 py-2 text-[13px] font-medium text-white transition-opacity disabled:opacity-35"
         >
-          {running ? `Generating ${progress + 1} of ${filled.length}…` : done ? "All blocks ready" : "Generate"}
+          {!running
+            ? done
+              ? "All blocks ready"
+              : "Generate"
+            : load !== null
+              ? `Loading voice… ${load}%`
+              : `Generating ${progress + 1} of ${filled.length}…`}
         </button>
       </div>
 
       {running && (
         <p aria-live="polite" className="mt-3 text-[12.5px] text-muted">
-          One request per block, so nothing runs into a function timeout — and a block that fails does not
-          cost you the ones that already worked.
+          {load !== null
+            ? "Downloading the voice model once. It is cached after this, and every block after it is instant."
+            : "Generating on this machine — no upload, no quota, and a block that fails does not cost you the ones that already worked."}
         </p>
       )}
 
