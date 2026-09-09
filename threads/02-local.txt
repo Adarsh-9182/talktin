@@ -1,0 +1,159 @@
+Last time I posted about this voice studio I ended on an admission: 13 pages, 4 API routes, 30 tests, deployed — and the audio had never played once.
+
+No API key. The entire product was engineering around something unproven.
+
+Here is what fixing that actually cost.
+
+---
+
+Part 1 — the problem was not the missing key.
+
+I could have pasted one in and moved on. But a hosted model means a quota, a bill, and a 60-second function limit on the free plan I am on.
+
+The product's core action would fail exactly when it started working: when people used it.
+
+---
+
+Part 2 — so the model moved into the browser.
+
+Kokoro-82M. 82 million parameters, Apache licensed, quantised to 8-bit. It runs through ONNX Runtime Web — WebGPU where the browser has it, WASM everywhere else.
+
+Weights download once, cached forever. No key, no quota, no timeout.
+
+---
+
+Part 3 — what I lost, said plainly.
+
+It is not ElevenLabs v3 and never will be.
+
+It also takes no performance notes. My composer had a "Direction" box that got prepended to the text.
+
+The new engine has no such input. That box was a control that silently did nothing.
+
+---
+
+It is now a speed slider, because speed is the one thing the model actually exposes.
+
+Deleting a feature that looked good in a screenshot, because it did not exist, was the least fun commit of the week.
+
+---
+
+Part 4 — the bugs that only surface once the thing runs.
+
+Every voice in my catalogue was named for the old provider.
+
+My landing demo was picking ids the new engine rejects. So were all 8 templates — clicking one handed the composer a voice that does not exist.
+
+---
+
+Two catalogues had quietly merged into one in my head.
+
+Dubbing still calls a hosted model, but imported the on-device list — asking a cloud API for a voice called af_heart.
+
+It failed silently for two commits, because that endpoint needs a key nobody had.
+
+---
+
+Part 5 — the fix is a test, not a patch.
+
+Both catalogues now live in separate files, and a test asserts no id appears in both and that their naming shapes stay visibly apart.
+
+af_heart vs Sulafat. Wire the wrong list into a screen and it is obvious on sight.
+
+---
+
+Part 6 — three interfaces that could not run.
+
+Dubbing, transcription and agents need a server key I do not have. All three still drew their full workspace, then returned a 500 the moment anyone used them.
+
+Looks finished. Fails exactly when someone decides to trust it.
+
+---
+
+They now check on the server and render an explanation instead: what the tool does, and how to turn it on in your own copy.
+
+The sidebar marks them rather than hiding them. Someone self-hosting can switch them on, and hiding makes the product look smaller than it is.
+
+---
+
+Part 7 — the landing page sold a product I had not built.
+
+"Speech in 90+ languages." It speaks two.
+"Direction in plain words." Deleted, see above.
+"Four tools on one foundation." Three need a key.
+
+Every claim was also unfalsifiable, which was the worse half.
+
+---
+
+So the pitch changed to the one thing a metered cloud API cannot answer:
+
+Nothing you type ever leaves this tab.
+
+And instead of asserting it, the hero measures it. The demo counts the browser's own resource entries during a generation and prints the number.
+
+---
+
+612ms · 0 network requests · nothing left this machine
+
+First press tells you how many requests fetched the model. Second press is zero.
+
+Do not believe me — open DevTools, or pull the Wi-Fi, and get the same number.
+
+---
+
+I do not show bytes, and the reason is a good lesson.
+
+transferSize is zeroed for cross-origin responses with no Timing-Allow-Origin. The weights CDN sends none.
+
+So a byte counter would read "0 bytes" during an 80MB download. A request count has no such hole.
+
+---
+
+Part 8 — sharing, without breaking the only promise I have.
+
+The obvious design is /hear?text=… — and a query string goes to the server, into its log, past every proxy in between.
+
+The words would leave the machine. On the way to a page whose point is that they do not.
+
+---
+
+So a share link carries its sentence after the #.
+
+Browsers never transmit anything after a #. The recipient hears the sentence and no server — mine included — ever sees a character of it.
+
+I checked my own access log to be sure. It says: GET /hear
+
+That is all it says.
+
+---
+
+The cost of that choice, stated rather than hidden: a shared link has no preview card showing the sentence, because the server cannot see it either.
+
+I will take that trade.
+
+---
+
+Part 9 — a bug my own test caught while I wrote it.
+
+Number(null) is 0, not NaN.
+
+So a link with no speed parameter read as 0 and clamped to the slowest the engine allows. Every shared link without one would have drawled.
+
+Six lines of test, before anyone shared anything.
+
+---
+
+Status, honestly:
+
+Speech runs, free, offline, at any volume, on 28 voices. 42 tests. Build and lint clean.
+
+Three tools still need a key and now say so instead of pretending.
+
+The thing I admitted last time was unproven is the thing that works best.
+
+---
+
+Code is open, including the parts that are not finished:
+
+github.com/Adarsh-9182/talktin
